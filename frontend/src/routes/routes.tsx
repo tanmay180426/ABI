@@ -20,6 +20,7 @@ export const router = createBrowserRouter([
         children: [
           // ---- Business intelligence (admin + analyst) ----
           { path: '/datasets', lazy: async () => ({ Component: (await import('@/pages/Datasets')).default }) },
+          { path: '/multi-dataset-analysis', lazy: async () => ({ Component: (await import('@/pages/MultiDatasetAnalysis')).default }) },
           {
             path: '/dashboard',
             lazy: async () => ({ Component: (await import('@/pages/Dashboard')).default }),

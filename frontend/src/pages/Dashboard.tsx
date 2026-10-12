@@ -188,7 +188,7 @@ export default function Dashboard() {
           Executive overview of the active dataset.
         </p>
       </div>
-      <FilterBar showGrain={false} />
+      <FilterBar showGrain={true} />
       {renderContent()}
     </div>
   )

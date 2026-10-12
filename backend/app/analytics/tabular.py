@@ -104,11 +104,28 @@ class TabularSource:
         return self.rows(self.statement(*expressions).where(col.is_not(None)).group_by(col)
                          .order_by(func.count().desc(), col).limit(limit))
 
-    def time_series(self, grain="month", limit=400):
+    def time_series(self, grain=None, limit=400):
         from sqlalchemy import literal_column
         col = self.field("date")
         if col is None:
             return []
+        if not grain:
+            if self.f and self.f.date_from and self.f.date_to:
+                from datetime import date
+                try:
+                    d_from = date.fromisoformat(self.f.date_from)
+                    d_to = date.fromisoformat(self.f.date_to)
+                    delta_days = (d_to - d_from).days
+                    if delta_days <= 31:
+                        grain = "day"
+                    elif delta_days <= 90:
+                        grain = "week"
+                    else:
+                        grain = "month"
+                except Exception:
+                    grain = "month"
+            else:
+                grain = "month"
         # Identifiers are generated c0..c99; dialect function is whitelisted.
         expression = f"{self.table.name}.{col.name}"
         if self.db.get_bind().dialect.name == "postgresql":
@@ -120,8 +137,34 @@ class TabularSource:
             cols.append(func.sum(amount).label("revenue" if self.field("revenue") is not None else "amount"))
         if order is not None:
             cols.append(func.count(func.distinct(order)).label("orders"))
-        return self.rows(self.statement(*cols).where(col.is_not(None)).group_by(period).order_by(period.desc())
-                         .limit(limit))[::-1]
+        rows = self.rows(self.statement(*cols).where(col.is_not(None)).group_by(period).order_by(period.desc())
+                          .limit(limit))[::-1]
+        if grain == "day" and self.f and self.f.date_from and self.f.date_to:
+            from datetime import date, timedelta
+            try:
+                start_d = date.fromisoformat(self.f.date_from)
+                end_d = date.fromisoformat(self.f.date_to)
+                if start_d <= end_d and (end_d - start_d).days <= 1000:
+                    raw_map = {r["period"]: r for r in rows if r.get("period")}
+                    filled = []
+                    cur = start_d
+                    rev_key = "revenue" if self.field("revenue") is not None else "amount"
+                    while cur <= end_d:
+                        cur_str = cur.isoformat()
+                        if cur_str in raw_map:
+                            filled.append(raw_map[cur_str])
+                        else:
+                            empty_row = {"period": cur_str, "rows": 0}
+                            if amount is not None:
+                                empty_row[rev_key] = 0.0
+                            if order is not None:
+                                empty_row["orders"] = 0
+                            filled.append(empty_row)
+                        cur += timedelta(days=1)
+                    return filled
+            except Exception:
+                pass
+        return rows
 
     def filters(self):
         filters = []
@@ -137,7 +180,7 @@ class TabularSource:
                 "date_range": {k: str(v or "") for k, v in dates.items()}, "categories": [], "customer_states": [],
                 "seller_states": [], "order_statuses": [], "payment_types": [], "review_scores": []}
 
-    def view(self, section):
+    def view(self, section, grain=None):
         capability = self.ds.capabilities.get(section, {"available": True})
         if not capability["available"]:
             return {"dataset_id": self.ds.id, "status": "not_applicable", "reason": capability["reason"],
@@ -175,7 +218,7 @@ class TabularSource:
             cards.extend({"label": name.replace("_", " "), "value": value} for name, value in delivery.items())
         return {"dataset_id": self.ds.id, "dataset_name": self.ds.name, "status": "available", "section": section,
                 "filters": self.f.as_dict(), "kpis": kpis, "metric_cards": cards, "numeric_statistics": numeric,
-                "distributions": distributions, "entities": entities, "time_series": self.time_series(),
+                "distributions": distributions, "entities": entities, "time_series": self.time_series(grain=grain),
                 "currency_code": self.ds.semantics.get("currency_code"), "capabilities": self.ds.capabilities,
                 "quality": self.ds.quality, "delivery": delivery}
 
@@ -206,7 +249,7 @@ def dataset_metric(function):
             col = source.field("status")
             return [{"status": r["label"], "orders": r["rows"]} for r in source.group(col)] if col is not None else []
         if name in {"overview", "sales", "orders", "customers", "products", "sellers", "delivery"}:
-            return source.view("dashboard" if name == "overview" else name)
+            return source.view("dashboard" if name == "overview" else name, grain=args[1] if len(args) > 1 else kwargs.get("grain"))
         # Specialized legacy submetrics cannot read the reference warehouse.
         raise HTTPException(422, f"{name.replace('_', ' ')} requires reference-specific fields.")
     return wrapped

@@ -1,0 +1,47 @@
+{
+    "model_name": "Gradient Boosting Regressor",
+    "target": "revenue",
+    "n_estimators": 300,
+    "learning_rate": 0.05,
+    "max_depth": 5,
+    "random_state": 42,
+    "evaluation": {
+        "MAE": 3401.7013293227346,
+        "RMSE": 4502.422931617357,
+        "R2": 0.633105906952234,
+        "MAPE": 16.27080280373874
+    },
+    "training_period": {
+        "start": "2017-09-04",
+        "end": "2024-09-04"
+    },
+    "features": [
+        "year",
+        "month",
+        "quarter",
+        "day_of_week",
+        "week_of_year",
+        "day_of_month",
+        "is_weekend",
+        "revenue_lag_1",
+        "revenue_lag_7",
+        "revenue_lag_14",
+        "revenue_lag_28",
+        "revenue_lag_30",
+        "revenue_lag_365",
+        "orders_lag_1",
+        "orders_lag_7",
+        "orders_lag_14",
+        "orders_lag_28",
+        "orders_lag_30",
+        "orders_lag_365",
+        "revenue_roll_mean_7",
+        "revenue_roll_std_7",
+        "revenue_roll_mean_14",
+        "revenue_roll_std_14",
+        "revenue_roll_mean_30",
+        "revenue_roll_std_30",
+        "revenue_roll_mean_90",
+        "revenue_roll_std_90"
+    ]
+}

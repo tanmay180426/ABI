@@ -43,10 +43,8 @@ def overview(
     db: Session = Depends(get_db),
 ):
     """Dashboard payload: KPIs, series and distributions in one request."""
-    view = metrics.overview(db, f)
-    if grain:
-        view["time_series" if "metric_cards" in view else "revenue_series"] = metrics.time_series(db, f, _grain(grain))
-    return view
+    chosen = _grain(grain) if grain else None
+    return metrics.overview(db, f, chosen)
 
 
 @router.get("/sales")

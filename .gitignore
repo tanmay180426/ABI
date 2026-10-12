@@ -1,59 +1,139 @@
-# Node
-frontend/node_modules/
+# ==============================================================================
+# Autonomous Business Intelligence Platform (ABI) - .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment and Secret Files
+# ------------------------------------------------------------------------------
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+.env.staging
+*.env
+# Explicitly preserve safe example templates
+!.env.example
+!.env.sample
+!.env.template
+
+# ------------------------------------------------------------------------------
+# 2. Credentials, Private Keys, and Cloud Tokens
+# ------------------------------------------------------------------------------
+*.pem
+*.key
+*.pkcs12
+*.pfx
+*.p12
+*.crt
+*.cer
+id_rsa*
+id_ecdsa*
+id_ed25519*
+credentials.json
+secrets.json
+*service-account*.json
+*service_account*.json
+serviceAccountKey.json
+firebase-adminsdk*.json
+
+# ------------------------------------------------------------------------------
+# 3. Python Artifacts, Virtual Environments, and Caches
+# ------------------------------------------------------------------------------
+.venv/
+*/.venv/
+venv/
+*/venv/
+env/
+*/env/
+ENV/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+*/.pytest_cache/
+.mypy_cache/
+*/.mypy_cache/
+.ruff_cache/
+*/.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+
+# ------------------------------------------------------------------------------
+# 4. Frontend Dependencies, Build Outputs, and Test Reports
+# ------------------------------------------------------------------------------
+node_modules/
+**/node_modules/
 frontend/dist/
+dist/
 frontend/.vite/
+**/.vite/
 frontend/.cache/
 frontend/*.tsbuildinfo
-
-
-
-# Playwright
+*.tsbuildinfo
 frontend/playwright-report/
 frontend/test-results/
 frontend/blob-report/
 frontend/playwright/.cache/
+playwright-report/
+test-results/
+blob-report/
 
-# Python
-backend/.venv/
-backend/__pycache__/
-backend/app/**/__pycache__/
-ml/.venv/
-ml/__pycache__/
-ml/src/**/__pycache__/
-*.pyc
-
-# Env
-.env
-.env.local
-
-# Local dev database (SQLite)
+# ------------------------------------------------------------------------------
+# 5. Local Databases and Storage
+# ------------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+sem5.db
+backend/sem5.db
 backend/*.db
 backend/*.sqlite
-*.db
+backend/uploads/
 
-# Data/model artifacts
+# ------------------------------------------------------------------------------
+# 6. ML Data and Serialized Model Artifacts
+# ------------------------------------------------------------------------------
 ml/data/processed/
 ml/models/*.pkl
 ml/models/*.joblib
+# Keep the verified safe lightweight model required for revenue forecasting
+!ml/models/gradient_boosting_sales_model.joblib
 ml/models/*.h5
 ml/models/*.onnx
 
-# Logs
+# ------------------------------------------------------------------------------
+# 7. Local Archives, Backups, and Scratch Files
+# ------------------------------------------------------------------------------
+*.backup
+*.bak
+*.swp
+*.swo
+*~
+olist dataset.zip
+*.zip
+.universal_work/
+ANTIGRAVITY_RESUME.md
+
+# ------------------------------------------------------------------------------
+# 8. Runtime Logs
+# ------------------------------------------------------------------------------
 *.log
 logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Build
-*.egg-info/
-
-# IDE
-.vscode/
-.idea/
-
-# OS
+# ------------------------------------------------------------------------------
+# 9. Operating System and IDE Files
+# ------------------------------------------------------------------------------
 .DS_Store
 Thumbs.db
-
-# Private uploads, source archives and local implementation/test scratch files
-olist dataset.zip
-backend/uploads/
-.universal_work/
+desktop.ini
+.vscode/
+.idea/

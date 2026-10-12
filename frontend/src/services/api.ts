@@ -46,7 +46,7 @@ export interface DatasetColumn {
 }
 export interface Dataset {
   updated_at: string | null
-  dataset_id: string; dataset_name: string; status: string; row_count: number; column_count: number; error: string | null; read_only: boolean
+  dataset_id: string; dataset_name: string; status: string; source_type?: string; row_count: number; column_count: number; error: string | null; read_only: boolean
   schema: { columns?: DatasetColumn[] }
   semantics: { fields?: Record<string, string>; currency_code?: string | null; domain?: string; ambiguities?: { role: string; candidates: string[] }[] }
   capabilities: Record<string, { available: boolean; reason: string | null }>
@@ -55,10 +55,219 @@ export interface Dataset {
 export function listDatasets() { return getJson<{ datasets: Dataset[]; active_dataset_id: string | null }>('/api/datasets') }
 export function selectDataset(id: string) { return request<Dataset>(`/api/datasets/${id}/select`, { method: 'POST' }) }
 export function deleteDataset(id: string) { return request<void>(`/api/datasets/${id}`, { method: 'DELETE' }) }
+export interface BatchUploadResult {
+  datasets: Dataset[]
+  successful: number
+  failed: number
+  skipped?: number
+  skipped_files?: Array<{ filename?: string; path?: string; reason: string }>
+  errors: Array<{ filename: string; path?: string; error: string }>
+}
+
+export interface AnalysisSession {
+  id: string
+  name: string
+  owner: string
+  mode: 'compare' | 'combine' | 'insights'
+  dataset_ids: string[]
+  datasets?: Dataset[]
+  config?: Record<string, unknown>
+  created_at: string | null
+  updated_at: string | null
+}
+
+export interface CompareResult {
+  mode: 'compare'
+  dataset_count: number
+  summaries: Array<{
+    dataset_id: string
+    dataset_name: string
+    source_type: string
+    row_count: number
+    column_count: number
+    missing_values: number
+    missing_percentage: number
+    date_range: { min: string | null; max: string | null; has_date: boolean }
+    revenue: { available: boolean; field: string | null; total: number | null; average: number | null; currency: string | null }
+    orders: { available: boolean; field: string | null; total: number | null }
+    numeric_summaries: Record<string, { min: number; max: number; mean: number; median: number }>
+    categorical_summaries: Record<string, { cardinality: number; top_values: Record<string, number> }>
+    columns: Array<{ name: string; dtype: string; role: string }>
+  }>
+  comparison_table: Array<{
+    dataset_name: string
+    dataset_id: string
+    rows: number
+    columns: number
+    date_coverage: string
+    total_revenue: string
+    total_orders: string
+    missing_pct: string
+  }>
+  kpi_cards: Array<{
+    title: string
+    values: Record<string, string>
+  }>
+  disclaimers: string[]
+}
+
+export interface CombineCompatibilityResult {
+  datasets: Array<{ id: string; name: string; row_count: number; columns: string[] }>
+  union: {
+    compatible: boolean
+    match_score_percent: number
+    common_columns: string[]
+    left_only_columns: string[]
+    right_only_columns: string[]
+    type_mismatches: Array<{ column: string; left_type: string; right_type: string }>
+    expected_row_count: number
+  }
+  join: {
+    has_candidates: boolean
+    candidate_keys: Array<{
+      key: string
+      left_dtype: string
+      right_dtype: string
+      left_unique: boolean
+      right_unique: boolean
+      left_nulls: number
+      right_nulls: number
+      relationship: string
+      risk: string
+      warning: string | null
+    }>
+    supported_join_types: string[]
+  }
+}
+
+export interface CombinePreviewResult {
+  operation: 'union' | 'join'
+  preview_rows: Array<Record<string, unknown>>
+  columns: string[]
+  total_preview_count: number
+  estimated_total_rows?: number
+  join_key?: string
+  join_type?: string
+  lineage?: Record<string, string>
+}
+
+export interface CrossDatasetInsightsResult {
+  mode: 'insights'
+  dataset_count: number
+  insights_count: number
+  insights: Array<{
+    title: string
+    finding: string
+    magnitude: string
+    source_datasets: string[]
+    fields_used: string[]
+    date_range: string
+    method: string
+    limitations: string
+  }>
+}
+
+export function listAnalysisSessions() {
+  return request<{ sessions: AnalysisSession[] }>('/api/analysis/sessions')
+}
+
+export function createAnalysisSession(data: { name: string; dataset_ids: string[]; mode?: string }) {
+  return request<AnalysisSession>('/api/analysis/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export function getAnalysisSession(id: string) {
+  return request<AnalysisSession>(`/api/analysis/sessions/${id}`)
+}
+
+export function updateAnalysisSession(id: string, data: Partial<AnalysisSession>) {
+  return request<AnalysisSession>(`/api/analysis/sessions/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+}
+
+export function addDatasetsToSession(sessionId: string, datasetIds: string[]) {
+  return request<AnalysisSession>(`/api/analysis/sessions/${sessionId}/datasets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_ids: datasetIds }),
+  })
+}
+
+export function removeDatasetFromSession(sessionId: string, datasetId: string) {
+  return request<AnalysisSession>(`/api/analysis/sessions/${sessionId}/datasets/${datasetId}`, {
+    method: 'DELETE',
+  })
+}
+
+export function deleteAnalysisSession(sessionId: string) {
+  return request<{ message: string; session_id: string }>(`/api/analysis/sessions/${sessionId}`, {
+    method: 'DELETE',
+  })
+}
+
+export function runDatasetComparison(datasetIds: string[]) {
+  return request<CompareResult>('/api/analysis/compare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_ids: datasetIds }),
+  })
+}
+
+export function checkCombineCompatibility(datasetIds: string[]) {
+  return request<CombineCompatibilityResult>('/api/analysis/combine/compatibility', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_ids: datasetIds }),
+  })
+}
+
+export function previewCombine(params: { operation: 'union' | 'join'; dataset_ids: string[]; join_key?: string; join_type?: string; columns?: string[] }) {
+  return request<CombinePreviewResult>('/api/analysis/combine/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+}
+
+export function executeCombine(params: { operation: 'union' | 'join'; dataset_ids: string[]; output_name?: string; join_key?: string; join_type?: string; columns?: string[] }) {
+  return request<Dataset>('/api/analysis/combine/execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  })
+}
+
+export function runCrossDatasetInsights(datasetIds: string[]) {
+  return request<CrossDatasetInsightsResult>('/api/analysis/insights', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset_ids: datasetIds }),
+  })
+}
+
 export function uploadDataset(file: File, name: string) {
   const form = new FormData(); form.append('file', file); form.append('name', name)
   return request<Dataset>('/api/datasets/upload', { method: 'POST', body: form })
 }
+
+export function uploadBatchDatasets(files: File[]) {
+  const form = new FormData()
+  files.forEach(f => form.append('files', f))
+  return request<BatchUploadResult>('/api/datasets/upload-batch', { method: 'POST', body: form })
+}
+
+export function uploadZipDataset(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return request<BatchUploadResult>('/api/datasets/upload-zip', { method: 'POST', body: form })
+}
+
 export function updateDatasetSchema(id: string, schema: { fields: Record<string, string | null>; currency_code: string | null; domain: string; date_order?: string }) {
   return request<Dataset>(`/api/datasets/${id}/schema`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(schema) })
 }

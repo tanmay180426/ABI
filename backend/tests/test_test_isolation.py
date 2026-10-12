@@ -31,3 +31,33 @@ def test_disposable_users_and_role_changes_do_not_touch_original(tmp_path):
     assert not isolated.exists()
     with closing(sqlite3.connect(original)) as db:
         assert db.execute('SELECT username, role FROM app_user').fetchall() == [('admin', 'admin')]
+
+
+def test_default_database_path_resolves_consistently_across_cwds(monkeypatch):
+    from sqlalchemy.engine.url import make_url
+    from app.core.config import BACKEND_DIR, DEFAULT_SQLITE_PATH, resolve_database_url
+
+    repo_root = BACKEND_DIR.parent
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    # 1. Path resolution when current working directory is repository root
+    monkeypatch.chdir(repo_root)
+    root_resolved = Path(make_url(resolve_database_url()).database).resolve()
+    assert root_resolved == DEFAULT_SQLITE_PATH
+
+    # 2. Path resolution when current working directory is backend directory
+    monkeypatch.chdir(BACKEND_DIR)
+    backend_resolved = Path(make_url(resolve_database_url()).database).resolve()
+    assert backend_resolved == DEFAULT_SQLITE_PATH
+
+    # 3. Path resolution when legacy relative default is provided
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///./sem5.db")
+    legacy_resolved = Path(make_url(resolve_database_url()).database).resolve()
+    assert legacy_resolved == DEFAULT_SQLITE_PATH
+
+    # 4. Explicit custom overrides are preserved without modification
+    custom_url = "sqlite:///custom/location.db"
+    monkeypatch.setenv("DATABASE_URL", custom_url)
+    assert resolve_database_url() == custom_url
+

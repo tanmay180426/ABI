@@ -4,6 +4,7 @@ import { getStoredUser, isAdmin, logout } from '@/services/auth'
 const BI_LINKS = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/analytics', label: 'Analytics' },
+  { to: '/multi-dataset-analysis', label: 'Multi-Dataset' },
   { to: '/ml', label: 'Machine Learning' },
   { to: '/insights', label: 'AI Insights' },
   { to: '/reports', label: 'Reports' },

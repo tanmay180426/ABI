@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { login } from '@/services/auth'
 
 export default function Login() {
@@ -8,6 +8,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -15,7 +16,8 @@ export default function Login() {
     setError(null)
     try {
       await login(username, password)
-      navigate('/dashboard')
+      const from = (location.state as { from?: string } | null)?.from || '/dashboard'
+      navigate(from, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {

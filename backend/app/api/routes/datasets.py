@@ -13,6 +13,8 @@ from app.database.deps import get_db
 from app.models.dataset import Dataset, DatasetSelection
 from app.services import datasets as service
 
+import tempfile
+
 router = APIRouter()
 
 
@@ -49,14 +51,124 @@ def list_datasets(db=Depends(get_db), user=Depends(require_bi_user)):
 def upload(file: UploadFile = File(...), name: str = Form(..., min_length=1, max_length=120),
            db=Depends(get_db), user=Depends(require_bi_user)):
     suffix = Path(file.filename or "").suffix.lower()
+    if suffix in service.EXECUTABLE_EXTENSIONS:
+        raise HTTPException(422, "Executable files are not permitted.")
     if suffix not in {".csv", ".json", ".xlsx", ".xls"}:
         raise HTTPException(422, "Unsupported file type. Use CSV, XLSX, XLS or flat-record JSON.")
     raw = file.file.read(service.MAX_BYTES + 1)
     if len(raw) > service.MAX_BYTES:
-        raise HTTPException(413, "File exceeds the configured upload size limit.")
+        raise HTTPException(413, f"File exceeds the configured upload size limit ({service.MAX_BYTES // (1024 * 1024)} MB).")
     if not name.strip():
         raise HTTPException(422, "Dataset name is required.")
-    return service.public(service.ingest(db, user, name.strip(), raw, suffix))
+    unique_name = service.unique_dataset_name(db, user["username"], name.strip())
+    provenance = {
+        "source_type": "single_upload",
+        "original_filename": file.filename or name.strip(),
+        "relative_path": file.filename or name.strip(),
+    }
+    return service.public(service.ingest(db, user, unique_name, raw, suffix, provenance=provenance))
+
+
+@router.post("/upload-batch", status_code=200)
+def upload_batch(files: list[UploadFile] = File(...),
+                 db=Depends(get_db), user=Depends(require_bi_user)):
+    if not files:
+        raise HTTPException(422, "No files uploaded.")
+    if len(files) > service.MAX_BATCH_FILES:
+        raise HTTPException(422, f"Batch upload exceeds maximum of {service.MAX_BATCH_FILES} files.")
+
+    successful_datasets = []
+    errors = []
+    skipped = []
+    used_names: set[str] = set()
+    total_batch_bytes = 0
+
+    for f in files:
+        raw_filename = (f.filename or "").replace("\\", "/")
+        if ".." in raw_filename or raw_filename.startswith("/") or ":" in raw_filename or "\x00" in raw_filename:
+            errors.append({"filename": raw_filename, "error": "Invalid filename or path traversal detected."})
+            continue
+
+        clean_filename = Path(raw_filename).name
+        suffix = Path(raw_filename).suffix.lower()
+
+        if suffix in service.EXECUTABLE_EXTENSIONS:
+            errors.append({"filename": clean_filename, "path": raw_filename, "error": "Executable files are not permitted."})
+            continue
+
+        if suffix not in {".csv", ".json", ".xlsx", ".xls"}:
+            skipped.append({"filename": clean_filename, "path": raw_filename, "reason": f"Unsupported file type '{suffix}'."})
+            errors.append({"filename": clean_filename, "path": raw_filename, "error": f"Unsupported file type '{suffix}'. Use CSV, XLSX, XLS or flat-record JSON."})
+            continue
+
+        try:
+            raw = f.file.read(service.MAX_BYTES + 1)
+            total_batch_bytes += len(raw)
+            if total_batch_bytes > service.MAX_BATCH_BYTES:
+                raise HTTPException(413, f"Batch upload exceeds maximum total size of {service.MAX_BATCH_BYTES // (1024 * 1024)} MB.")
+
+            if len(raw) > service.MAX_BYTES:
+                errors.append({"filename": clean_filename, "path": raw_filename, "error": f"File exceeds upload limit of {service.MAX_BYTES // (1024 * 1024)} MB."})
+                continue
+
+            base_name = Path(clean_filename).stem.strip() or "Dataset"
+            unique_name = service.unique_dataset_name(db, user["username"], base_name, used_names)
+            used_names.add(unique_name)
+
+            provenance = {
+                "source_type": "folder_upload" if "/" in raw_filename else "batch_upload",
+                "original_filename": clean_filename,
+                "relative_path": raw_filename,
+            }
+            ds = service.ingest(db, user, unique_name, raw, suffix, provenance=provenance)
+            if ds.status == "FAILED":
+                errors.append({"filename": clean_filename, "path": raw_filename, "error": ds.error or "Dataset processing failed."})
+            else:
+                successful_datasets.append(service.public(ds))
+        except HTTPException:
+            raise
+        except Exception as e:
+            errors.append({"filename": clean_filename, "path": raw_filename, "error": str(e)})
+
+    return {
+        "datasets": successful_datasets,
+        "successful": len(successful_datasets),
+        "failed": len(errors),
+        "skipped": len(skipped),
+        "skipped_files": skipped,
+        "errors": errors,
+        "total_files": len(files),
+    }
+
+
+@router.post("/upload-zip", status_code=200)
+def upload_zip(file: UploadFile = File(...),
+               db=Depends(get_db), user=Depends(require_bi_user)):
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix != ".zip":
+        raise HTTPException(422, "Unsupported archive type. Only .zip files are supported.")
+
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    tmp_path = Path(tmp_file.name)
+    total_size = 0
+
+    try:
+        while True:
+            chunk = file.file.read(1024 * 1024)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > service.MAX_ZIP_BYTES:
+                tmp_file.close()
+                tmp_path.unlink(missing_ok=True)
+                raise HTTPException(413, f"ZIP file exceeds upload size limit ({service.MAX_ZIP_BYTES // (1024 * 1024)} MB).")
+            tmp_file.write(chunk)
+        tmp_file.close()
+
+        result = service.ingest_zip_archive_file(tmp_path, db, user, archive_name=file.filename or "archive.zip")
+        return result
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 @router.get("/{dataset_id}")

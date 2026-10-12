@@ -22,14 +22,202 @@ from fastapi import HTTPException
 from sqlalchemy import Column, Float, Integer, MetaData, String, Table, Text, func, inspect, select
 from sqlalchemy.orm import Session
 
-from app.models.dataset import Dataset, DatasetSelection
+from app.models.dataset import Dataset, DatasetSelection, AnalysisSession
+from app.core.config import settings
 
-MAX_BYTES = int(os.getenv("DATASET_MAX_BYTES", 20 * 1024 * 1024))
-MAX_ROWS = int(os.getenv("DATASET_MAX_ROWS", 100_000))
-MAX_COLUMNS = int(os.getenv("DATASET_MAX_COLUMNS", 100))
-MAX_SECONDS = int(os.getenv("DATASET_MAX_SECONDS", 60))
-MAX_CELLS = int(os.getenv("DATASET_MAX_CELLS", 2_000_000))
+MAX_BYTES = settings.DATASET_MAX_BYTES
+MAX_ZIP_BYTES = settings.DATASET_MAX_ZIP_BYTES
+MAX_ROWS = settings.DATASET_MAX_ROWS
+MAX_COLUMNS = settings.DATASET_MAX_COLUMNS
+MAX_SECONDS = int(os.getenv("DATASET_MAX_SECONDS", 300))
+MAX_CELLS = settings.DATASET_MAX_CELLS
+MAX_BATCH_FILES = settings.DATASET_MAX_BATCH_FILES
+MAX_BATCH_BYTES = settings.DATASET_MAX_BATCH_BYTES
+MAX_EXTRACTED_BYTES = settings.DATASET_MAX_EXTRACTED_BYTES
+MAX_EXTRACTED_FILES = settings.DATASET_MAX_EXTRACTED_FILES
 REFERENCE_ID = "00000000-0000-0000-0000-000000000001"
+
+EXECUTABLE_EXTENSIONS = {
+    ".exe", ".dll", ".so", ".dylib", ".bat", ".cmd", ".sh", ".ps1",
+    ".vbs", ".js", ".mjs", ".jar", ".com", ".scr", ".msi", ".bin",
+    ".py", ".elf", ".app", ".reg", ".wsf", ".cpl"
+}
+
+
+def unique_dataset_name(db: Session, owner: str, base_name: str, existing_in_batch: set[str] | None = None) -> str:
+    """Ensure dataset name is unique for the user and within the current upload batch."""
+    from sqlalchemy import select
+    ensure_registry(db)
+    clean_base = re.sub(r"\s+", " ", str(base_name)).strip()[:110] or "Dataset"
+    existing_db = set(db.scalars(select(Dataset.name).where(Dataset.owner == owner)).all())
+    if existing_in_batch:
+        existing_db.update(existing_in_batch)
+    if clean_base not in existing_db:
+        return clean_base
+    counter = 1
+    while f"{clean_base} ({counter})" in existing_db:
+        counter += 1
+    return f"{clean_base} ({counter})"
+
+
+def inspect_and_extract_zip(raw_zip: bytes) -> list[tuple[str, bytes, str]]:
+    """
+    Safely inspect and extract a ZIP archive in-memory.
+    Enforces:
+    - Path traversal rejection ('..', absolute paths, rooted paths, null bytes)
+    - Executable rejection across all archive entries
+    - Size and zip-bomb protection (uncompressed total size limit and ratio checks)
+    - File count limits
+    - Filters to supported data types (.csv, .xlsx, .xls, .json)
+    - Skips macOS __MACOSX / ._ files and hidden metadata (.DS_Store)
+    Returns list of (clean_dataset_name, file_bytes, suffix).
+    """
+    if len(raw_zip) > MAX_ZIP_BYTES:
+        raise HTTPException(413, f"ZIP file exceeds the {MAX_ZIP_BYTES // (1024 * 1024)} MB limit.")
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(raw_zip))
+    except (zipfile.BadZipFile, Exception):
+        raise HTTPException(422, "Invalid or corrupted ZIP archive.")
+
+    infolist = archive.infolist()
+    if not infolist:
+        raise HTTPException(422, "The ZIP archive is empty.")
+
+    total_uncompressed = sum(info.file_size for info in infolist)
+    if total_uncompressed > MAX_EXTRACTED_BYTES:
+        raise HTTPException(413, f"ZIP uncompressed content exceeds the safety limit of {MAX_EXTRACTED_BYTES // (1024 * 1024)} MB.")
+
+    # Zip bomb ratio protection
+    if len(raw_zip) > 0 and (total_uncompressed / max(1, len(raw_zip))) > 100:
+        raise HTTPException(413, "ZIP compression ratio exceeds safety limits (possible zip bomb).")
+
+    extracted_files: list[tuple[str, bytes, str]] = []
+    supported_extensions = {".csv", ".xlsx", ".xls", ".json"}
+
+    for info in infolist:
+        filename = info.filename
+        # Path traversal checks
+        if ".." in filename or filename.startswith("/") or filename.startswith("\\") or ":" in filename or "\x00" in filename:
+            raise HTTPException(422, f"Path traversal detected in ZIP entry: {filename}")
+
+        # Check for executables
+        ext = Path(filename).suffix.lower()
+        if ext in EXECUTABLE_EXTENSIONS:
+            raise HTTPException(422, f"Executable files are not permitted in ZIP archive: {filename}")
+
+        # Skip directories and macOS hidden resource forks
+        if info.is_dir() or "__MACOSX" in filename or Path(filename).name.startswith("._") or Path(filename).name == ".DS_Store":
+            continue
+
+        if ext in supported_extensions:
+            if info.file_size > MAX_BYTES:
+                raise HTTPException(413, f"File {Path(filename).name} in ZIP exceeds {MAX_BYTES // (1024 * 1024)} MB limit.")
+            file_data = archive.read(info)
+            stem = Path(filename).stem.strip() or "Dataset"
+            extracted_files.append((stem, file_data, ext))
+
+    if not extracted_files:
+        raise HTTPException(422, "No supported data files (.csv, .xlsx, .xls, .json) found in ZIP archive.")
+
+    if len(extracted_files) > MAX_EXTRACTED_FILES:
+        raise HTTPException(422, f"ZIP archive contains {len(extracted_files)} data files, exceeding the {MAX_EXTRACTED_FILES} files limit.")
+
+    return extracted_files
+
+
+def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive_name: str) -> dict:
+    """Safely stream and process all supported files in a ZIP archive from disk."""
+    stat = archive_path.stat()
+    if stat.st_size > MAX_ZIP_BYTES:
+        raise HTTPException(413, f"ZIP file exceeds upload size limit ({MAX_ZIP_BYTES // (1024 * 1024)} MB).")
+
+    try:
+        archive = zipfile.ZipFile(archive_path, "r")
+    except (zipfile.BadZipFile, Exception):
+        raise HTTPException(422, "Invalid or corrupted ZIP archive.")
+
+    with archive:
+        infolist = archive.infolist()
+        if not infolist:
+            raise HTTPException(422, "The ZIP archive is empty.")
+
+        if len(infolist) > MAX_EXTRACTED_FILES:
+            raise HTTPException(413, f"ZIP archive contains {len(infolist)} files, exceeding the {MAX_EXTRACTED_FILES} files limit.")
+
+        total_uncompressed = sum(info.file_size for info in infolist)
+        if total_uncompressed > MAX_EXTRACTED_BYTES:
+            raise HTTPException(413, f"ZIP uncompressed content ({total_uncompressed // (1024 * 1024)} MB) exceeds the safety limit of {MAX_EXTRACTED_BYTES // (1024 * 1024)} MB.")
+
+        if stat.st_size > 0 and (total_uncompressed / max(1, stat.st_size)) > 100:
+            raise HTTPException(413, "ZIP compression ratio exceeds safety limits (possible zip bomb).")
+
+        supported_extensions = {".csv", ".xlsx", ".xls", ".json"}
+        for info in infolist:
+            filename = info.filename
+            if ".." in filename or filename.startswith("/") or filename.startswith("\\") or ":" in filename or "\x00" in filename:
+                raise HTTPException(422, f"Path traversal detected in ZIP entry: {filename}")
+            ext = Path(filename).suffix.lower()
+            if ext in EXECUTABLE_EXTENSIONS:
+                raise HTTPException(422, f"Executable files are not permitted in ZIP archive: {filename}")
+            if info.flag_bits & 0x1:
+                raise HTTPException(422, f"Encrypted or password-protected entries are not supported: {filename}")
+
+        successful_datasets = []
+        errors = []
+        skipped_files = []
+        used_names: set[str] = set()
+
+        supported_entries = [
+            info for info in infolist
+            if not info.is_dir()
+            and "__MACOSX" not in info.filename
+            and not Path(info.filename).name.startswith("._")
+            and Path(info.filename).name != ".DS_Store"
+            and Path(info.filename).suffix.lower() in supported_extensions
+        ]
+
+        if not supported_entries:
+            raise HTTPException(422, "No supported data files (.csv, .xlsx, .xls, .json) found in ZIP archive.")
+
+        for info in infolist:
+            if info.is_dir() or "__MACOSX" in info.filename or Path(info.filename).name.startswith("._") or Path(info.filename).name == ".DS_Store":
+                continue
+
+            ext = Path(info.filename).suffix.lower()
+            if ext not in supported_extensions:
+                skipped_files.append({"path": info.filename, "reason": f"Unsupported format ({ext or 'no extension'})"})
+                continue
+
+            if info.file_size > MAX_BYTES:
+                errors.append({"path": info.filename, "error": f"Extracted file exceeds {MAX_BYTES // (1024 * 1024)} MB limit."})
+                continue
+
+            stem = Path(info.filename).stem.strip() or "Dataset"
+            try:
+                unique_name = unique_dataset_name(db, user["username"], stem, used_names)
+                used_names.add(unique_name)
+                file_bytes = archive.read(info)
+                ds = ingest(db, user, unique_name, file_bytes, ext, provenance={"archive": archive_name, "relative_path": info.filename})
+                if ds.status == "FAILED":
+                    errors.append({"path": info.filename, "error": ds.error or "Dataset processing failed."})
+                else:
+                    successful_datasets.append(public(ds))
+            except Exception as e:
+                errors.append({"path": info.filename, "error": str(e)})
+
+        return {
+            "archive_name": archive_name,
+            "archive_size": stat.st_size,
+            "files_discovered": len(infolist),
+            "supported_files": len(supported_entries),
+            "successful": len(successful_datasets),
+            "failed": len(errors),
+            "skipped": len(skipped_files),
+            "skipped_files": skipped_files,
+            "datasets": successful_datasets,
+            "errors": errors,
+        }
 
 # Deliberately conservative: ambiguous 'amount' is currency, not revenue;
 # arbitrary identifiers and numeric fields never become customers or sales.
@@ -74,6 +262,7 @@ def ensure_registry(db: Session):
     bind = db.get_bind()
     Dataset.__table__.create(bind, checkfirst=True)
     DatasetSelection.__table__.create(bind, checkfirst=True)
+    AnalysisSession.__table__.create(bind, checkfirst=True)
     if not db.get(Dataset, REFERENCE_ID) and "fact_orders" in inspect(bind).get_table_names():
         from sqlalchemy import text
         n = db.scalar(text("SELECT COUNT(*) FROM fact_orders"))
@@ -104,6 +293,7 @@ def public(ds):
                 {k: v for k, v in column.items() if k != "storage"}
                 for column in ds.profile.get("columns", [])]}, "semantics": ds.semantics,
             "capabilities": ds.capabilities, "quality": ds.quality, "error": ds.error,
+            "provenance": ds.profile.get("provenance", {}),
             "read_only": ds.owner is None}
     # Older metadata may predate finite-statistic validation. Unknown values
     # remain unavailable rather than becoming fabricated zeroes.
@@ -372,10 +562,11 @@ def detect_capabilities(semantics):
             for name, needed in requirements.items()}
 
 
-def ingest(db, user, name, raw, suffix):
+def ingest(db, user, name, raw, suffix, provenance: dict | None = None):
     ensure_registry(db)
+    raw_to_store = raw if len(raw) <= 10 * 1024 * 1024 else None
     ds = Dataset(id=str(uuid.uuid4()), name=name, owner=user["username"], status="PROCESSING",
-                 source_type=suffix.lstrip("."), raw_source=raw)
+                 source_type=suffix.lstrip("."), raw_source=raw_to_store)
     db.add(ds)
     db.commit()
     started = time.monotonic()
@@ -401,7 +592,8 @@ def ingest(db, user, name, raw, suffix):
                 from sqlalchemy import Index
                 Index(f"ix_{table.name}_{col['storage']}", table.c[col["storage"]]).create(db.connection())
         ds.row_count, ds.column_count = len(source), len(columns)
-        ds.profile, ds.quality = {"columns": columns}, {**quality, "processing_seconds": round(time.monotonic() - started, 3)}
+        ds.profile = {"columns": columns, "provenance": provenance or {}}
+        ds.quality = {**quality, "processing_seconds": round(time.monotonic() - started, 3)}
         ds.semantics = infer_semantics(columns)
         ds.capabilities = detect_capabilities(ds.semantics)
         ds.status = "READY"

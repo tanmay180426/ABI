@@ -52,7 +52,9 @@ export default function AppLayout() {
             <option value="" disabled>Select a dataset</option>
             {datasets.filter(d => d.status === 'READY').map(d => <option key={d.dataset_id} value={d.dataset_id}>{d.dataset_name}</option>)}
           </select>
-          <Link to="/datasets" className="text-blue-400">Dataset Manager</Link>
+          <Link to="/datasets" className="text-blue-400 hover:text-blue-300">Dataset Manager</Link>
+          <span className="text-neutral-750">•</span>
+          <Link to="/multi-dataset-analysis" className="text-emerald-400 hover:text-emerald-300">Multi-Dataset Analysis</Link>
           {busy && <span role="status">Switching dataset…</span>}
         </div>
       </header>

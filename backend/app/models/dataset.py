@@ -30,3 +30,15 @@ class DatasetSelection(Base):
     __tablename__ = "app_dataset_selection"
     username = Column(String(120), primary_key=True)
     dataset_id = Column(String(36), nullable=False)
+
+
+class AnalysisSession(Base):
+    __tablename__ = "app_analysis_session"
+    id = Column(String(36), primary_key=True)
+    name = Column(String(120), nullable=False)
+    owner = Column(String(120), nullable=False, index=True)
+    mode = Column(String(32), nullable=False, default="compare")
+    dataset_ids = Column(JSON, default=list)
+    config = Column(JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

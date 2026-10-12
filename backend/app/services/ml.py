@@ -104,41 +104,165 @@ def _load_artifact(name: str):
 
 
 def forecast(periods: int = 30, target: str = "orders", db=None, f=None) -> dict:
-    """Recursive daily forecast using lag/rolling features."""
+    """Recursive daily forecast for orders or revenue."""
     import numpy as np
     import pandas as pd
 
-    bundle = _load_artifact(f"sales_forecast_{target}")
-    model, feature_cols = bundle["model"], bundle["features"]
-
+    if target not in {"orders", "revenue"}:
+        raise ValueError("target must be 'orders' or 'revenue'")
     if db is None:
         raise ValueError("Dataset context is required for inference.")
+
     from app.analytics import metrics
     from app.analytics.filters import Filters
-    points = metrics.time_series(db, f or Filters(), "day", limit=100_000)
+
+    # Internal history filter: preserve all dimension filters (category, customer_state, etc.)
+    # but do NOT restrict date_from, ensuring the model has sufficient multi-horizon history (365 days).
+    feature_filter = Filters(
+        date_from=None,
+        date_to=None,
+        category=f.category if f else None,
+        customer_state=f.customer_state if f else None,
+        seller_state=f.seller_state if f else None,
+        order_status=f.order_status if f else None,
+        payment_type=f.payment_type if f else None,
+        review_score=f.review_score if f else None,
+        column_filters=f.column_filters if f else None,
+    ) if f else Filters()
+
+    points = metrics.time_series(db, feature_filter, "day", limit=100_000)
+    if not points:
+        raise ValueError("No historical data available.")
+
     series = pd.DataFrame(points).rename(columns={"period": "date"})
     series["date"] = pd.to_datetime(series["date"])
-    hist = series.set_index("date")[target].astype(float).copy()
-    last_date = hist.index.max()
-    values = list(hist.values)
+    series = series.sort_values("date").drop_duplicates("date")
+    series = series.set_index("date")
+
+    start_date, last_date = series.index.min(), series.index.max()
+    calendar = pd.date_range(start_date, last_date, freq="D")
+    series = series.reindex(calendar).fillna(0.0)
+
+    if target == "orders":
+        bundle = _load_artifact("sales_forecast_orders")
+        model, feature_cols = bundle["model"], bundle["features"]
+        hist = series["orders"].astype(float).copy()
+        values = list(hist.values)
+        if len(values) < 30:
+            raise ValueError("Orders forecasting requires at least 30 daily observations.")
+        preds = []
+
+        for step in range(periods):
+            window = np.array(values, dtype=float)
+            feats = {
+                "lag1": window[-1],
+                "lag7": window[-7],
+                "lag14": window[-14],
+                "lag30": window[-30],
+                "roll7": window[-7:].mean(),
+                "roll30": window[-30:].mean(),
+            }
+            row = pd.DataFrame(
+                [[feats[c] for c in feature_cols]],
+                columns=feature_cols,
+            )
+            yhat = max(0.0, float(model.predict(row)[0]))
+            values.append(yhat)
+            preds.append({
+                "date": (last_date + pd.Timedelta(days=step + 1)).strftime("%Y-%m-%d"),
+                target: round(yhat, 2),
+            })
+
+        all_hist = [
+            {"date": d.strftime("%Y-%m-%d"), target: round(float(v), 2)}
+            for d, v in zip(calendar, values[:len(calendar)])
+        ]
+        if f and (f.date_from or f.date_to):
+            display_hist = [
+                p for p in all_hist
+                if (not f.date_from or p["date"] >= f.date_from)
+                and (not f.date_to or p["date"] <= f.date_to)
+            ]
+            history_tail = display_hist if display_hist else all_hist[-30:]
+        else:
+            history_tail = all_hist[-30:]
+
+        return {
+            "history_tail": history_tail,
+            "forecast": preds,
+        }
+
+    # Revenue model: raw sklearn estimator + registered metadata.
+    model = _load_artifact("sales_forecast_revenue")
+    meta = load_all_metadata()["sales_forecast_revenue"]
+    feature_cols = meta["features_schema"]
+
+    revenue_values = series["revenue"].astype(float).tolist()
+    orders_values = series["orders"].astype(float).tolist()
+
+    if len(revenue_values) < 365:
+        raise ValueError("Revenue forecasting requires at least 365 daily observations.")
 
     preds = []
     for step in range(periods):
-        window = np.array(values, dtype=float)
-        feats = {
-            "lag1": window[-1],
-            "lag7": window[-7],
-            "lag14": window[-14],
-            "lag30": window[-30],
-            "roll7": window[-7:].mean(),
-            "roll30": window[-30:].mean(),
-        }
-        row = pd.DataFrame([[feats[c] for c in feature_cols]], columns=feature_cols)
-        yhat = float(model.predict(row)[0])
-        values.append(yhat)
-        preds.append({"date": (last_date + pd.Timedelta(days=step + 1)).strftime("%Y-%m-%d"), target: round(yhat, 2)})
-    return {"history_tail": [{"date": d.strftime("%Y-%m-%d"), target: float(v)} for d, v in list(hist.items())[-30:]], "forecast": preds}
+        day = last_date + pd.Timedelta(days=step + 1)
 
+        # Estimate future orders using the same weekday from the prior week.
+        estimated_orders = max(0.0, float(orders_values[-7]))
+
+        rv = np.asarray(revenue_values, dtype=float)
+        ov = np.asarray(orders_values, dtype=float)
+
+        def sample_std(values):
+            return float(np.std(values, ddof=1)) if len(values) > 1 else 0.0
+
+        features = {
+            "year": day.year,
+            "month": day.month,
+            "quarter": day.quarter,
+            "day_of_week": day.dayofweek,
+            "week_of_year": int(day.isocalendar().week),
+            "day_of_month": day.day,
+            "is_weekend": int(day.dayofweek >= 5),
+        }
+
+        for lag in (1, 7, 14, 28, 30, 365):
+            features[f"revenue_lag_{lag}"] = float(rv[-lag])
+            features[f"orders_lag_{lag}"] = float(ov[-lag])
+
+        for window in (7, 14, 30, 90):
+            recent = rv[-window:]
+            features[f"revenue_roll_mean_{window}"] = float(np.mean(recent))
+            features[f"revenue_roll_std_{window}"] = sample_std(recent)
+
+        row = pd.DataFrame(
+            [[features[col] for col in feature_cols]],
+            columns=feature_cols,
+        )
+        yhat = max(0.0, float(model.predict(row)[0]))
+
+        revenue_values.append(yhat)
+        orders_values.append(estimated_orders)
+        preds.append({
+            "date": day.strftime("%Y-%m-%d"),
+            "revenue": round(yhat, 2),
+        })
+
+    all_history = [
+        {"date": d.strftime("%Y-%m-%d"), "revenue": round(float(v), 2)}
+        for d, v in zip(calendar, revenue_values[:len(calendar)])
+    ]
+    if f and (f.date_from or f.date_to):
+        display_history = [
+            p for p in all_history
+            if (not f.date_from or p["date"] >= f.date_from)
+            and (not f.date_to or p["date"] <= f.date_to)
+        ]
+        history_tail = display_history if display_history else all_history[-30:]
+    else:
+        history_tail = all_history[-30:]
+
+    return {"history_tail": history_tail, "forecast": preds}
 
 def anomalies(db=None, f=None) -> dict:
     if db is not None:
