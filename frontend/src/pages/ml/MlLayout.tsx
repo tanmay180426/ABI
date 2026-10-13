@@ -1,9 +1,9 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 
 const nav = [
-  { name: 'Metrics', path: '/ml/metrics' },
+  { name: 'Prediction & Forecasting', path: '/ml/revenue-forecast' },
   { name: 'Product Segmentation', path: '/ml/product-segmentation' },
-  { name: 'Revenue Forecast', path: '/ml/revenue-forecast' },
+  { name: 'Model Registry & Catalog', path: '/ml/metrics' },
 ]
 
 export default function MlLayout() {

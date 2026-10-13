@@ -48,9 +48,11 @@ class Settings(BaseSettings):
     DATASET_MAX_BATCH_BYTES: int = int(os.getenv("DATASET_MAX_BATCH_BYTES", str(600 * 1024 * 1024)))
     DATASET_MAX_EXTRACTED_BYTES: int = int(os.getenv("DATASET_MAX_EXTRACTED_BYTES", str(1024 * 1024 * 1024)))
     DATASET_MAX_EXTRACTED_FILES: int = int(os.getenv("DATASET_MAX_EXTRACTED_FILES", "2000"))
-    DATASET_MAX_ROWS: int = int(os.getenv("DATASET_MAX_ROWS", "1000000"))
+    DATASET_MAX_ROWS: int = int(os.getenv("DATASET_MAX_ROWS", "2000000"))
     DATASET_MAX_COLUMNS: int = int(os.getenv("DATASET_MAX_COLUMNS", "100"))
-    DATASET_MAX_CELLS: int = int(os.getenv("DATASET_MAX_CELLS", "20000000"))
+    DATASET_MAX_CELLS: int = int(os.getenv("DATASET_MAX_CELLS", "40000000"))
+    DATASET_MAX_ZIP_DEPTH: int = int(os.getenv("DATASET_MAX_ZIP_DEPTH", "10"))
+    DATASET_MAX_COMPRESSION_RATIO: float = float(os.getenv("DATASET_MAX_COMPRESSION_RATIO", "100.0"))
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod

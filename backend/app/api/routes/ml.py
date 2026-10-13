@@ -81,3 +81,29 @@ def ml_product_segmentation(
     db=Depends(get_db)
 ):
     return _infer("product_segmentation", db, f, lambda: ml_service.product_segments(db, f))
+
+
+class DatasetForecastRequest(BaseModel):
+    target_column: str | None = None
+    date_column: str | None = None
+    periods: int = Field(default=30, ge=1, le=90)
+    grain: str = "day"
+
+
+@router.get("/forecast/options")
+def ml_forecast_options(db=Depends(get_db)):
+    """Return available temporal and numerical columns for forecasting."""
+    return ml_service.forecast_options(db)
+
+
+@router.post("/forecast/dataset")
+def ml_dataset_forecast(payload: DatasetForecastRequest = DatasetForecastRequest(), db=Depends(get_db)):
+    """Universal forecasting engine for any active dataset with time-series observations."""
+    return ml_service.dataset_forecast(
+        db,
+        target_column=payload.target_column,
+        date_column=payload.date_column,
+        periods=payload.periods,
+        grain=payload.grain,
+    )
+

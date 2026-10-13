@@ -2,6 +2,7 @@ import { getRefreshToken, getToken, getSessionGeneration, refreshAccessToken, ty
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 let activeDatasetId: string | null = null
+let activeCollectionId: string | null = null
 let datasetVersion = 0
 const pendingGets = new Map<string, Promise<unknown>>()
 
@@ -11,12 +12,20 @@ export function getRequestContext(): string {
 
 export function setDatasetScope(id: string | null) {
   activeDatasetId = id
+  activeCollectionId = null
+  datasetVersion += 1
+}
+
+export function setCollectionScope(id: string | null) {
+  activeCollectionId = id
+  activeDatasetId = null
   datasetVersion += 1
 }
 
 function authHeaders(): Record<string, string> {
   const token = getToken()
   return { ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(activeCollectionId ? { 'X-Collection-ID': activeCollectionId } : {}),
     ...(activeDatasetId ? { 'X-Dataset-ID': activeDatasetId } : {}) }
 }
 
@@ -45,15 +54,54 @@ export interface DatasetColumn {
   name: string; dtype: string; role: string; confidence: number; missing: number; unique: number; constant: boolean; ambiguous_date: boolean
 }
 export interface Dataset {
+  created_at?: string | null
   updated_at: string | null
   dataset_id: string; dataset_name: string; status: string; source_type?: string; row_count: number; column_count: number; error: string | null; read_only: boolean
   schema: { columns?: DatasetColumn[] }
   semantics: { fields?: Record<string, string>; currency_code?: string | null; domain?: string; ambiguities?: { role: string; candidates: string[] }[] }
   capabilities: Record<string, { available: boolean; reason: string | null }>
   quality: { missing_values?: number; duplicate_rows?: number; warnings?: string[] }
+  provenance?: { source_type?: string; original_filename?: string; relative_path?: string; archive?: string; file_size?: number }
 }
-export function listDatasets() { return getJson<{ datasets: Dataset[]; active_dataset_id: string | null }>('/api/datasets') }
+
+export interface UploadLimits {
+  max_bytes: number
+  max_bytes_mb: number
+  max_zip_bytes: number
+  max_zip_bytes_mb: number
+  max_batch_bytes: number
+  max_batch_bytes_mb: number
+  max_batch_files: number
+  max_extracted_bytes: number
+  max_extracted_bytes_mb: number
+  max_extracted_files: number
+  max_rows: number
+  max_columns: number
+  max_cells: number
+  max_zip_depth: number
+  max_compression_ratio: number
+  supported_file_types: string[]
+  supported_archive_types: string[]
+}
+
+export interface CollectionItem {
+  collection_id: string
+  collection_name: string
+  source_mode: 'ZIP_COLLECTION' | 'FOLDER_COLLECTION' | 'INDIVIDUAL_FILE' | 'EXPLICIT_MULTI_FILE_SELECTION'
+  source_type: 'zip' | 'folder' | 'single'
+  dataset_count: number
+  total_rows: number
+  dataset_ids: string[]
+  datasets: Dataset[]
+}
+
+export function getUploadLimits() { return getJson<UploadLimits>('/api/datasets/limits') }
+export function getDatasetCollections() { return getJson<{ collections: CollectionItem[] }>('/api/datasets/collections') }
+export function listDatasets() { return getJson<{ datasets: Dataset[]; active_dataset_id: string | null; active_source?: { source_mode: CollectionItem['source_mode']; source_id: string | null } }>('/api/datasets') }
 export function selectDataset(id: string) { return request<Dataset>(`/api/datasets/${id}/select`, { method: 'POST' }) }
+export function selectCollection(id: string) {
+  return request<{ collection_id: string; source_mode: CollectionItem['source_mode']; collection_name: string; datasets: Dataset[] }>(`/api/datasets/collections/${encodeURIComponent(id)}/select`, { method: 'POST' })
+}
 export function deleteDataset(id: string) { return request<void>(`/api/datasets/${id}`, { method: 'DELETE' }) }
 export interface BatchUploadResult {
   datasets: Dataset[]
@@ -64,208 +112,22 @@ export interface BatchUploadResult {
   errors: Array<{ filename: string; path?: string; error: string }>
 }
 
-export interface AnalysisSession {
-  id: string
-  name: string
-  owner: string
-  mode: 'compare' | 'combine' | 'insights'
-  dataset_ids: string[]
-  datasets?: Dataset[]
-  config?: Record<string, unknown>
-  created_at: string | null
-  updated_at: string | null
-}
-
-export interface CompareResult {
-  mode: 'compare'
-  dataset_count: number
-  summaries: Array<{
-    dataset_id: string
-    dataset_name: string
-    source_type: string
-    row_count: number
-    column_count: number
-    missing_values: number
-    missing_percentage: number
-    date_range: { min: string | null; max: string | null; has_date: boolean }
-    revenue: { available: boolean; field: string | null; total: number | null; average: number | null; currency: string | null }
-    orders: { available: boolean; field: string | null; total: number | null }
-    numeric_summaries: Record<string, { min: number; max: number; mean: number; median: number }>
-    categorical_summaries: Record<string, { cardinality: number; top_values: Record<string, number> }>
-    columns: Array<{ name: string; dtype: string; role: string }>
-  }>
-  comparison_table: Array<{
-    dataset_name: string
-    dataset_id: string
-    rows: number
-    columns: number
-    date_coverage: string
-    total_revenue: string
-    total_orders: string
-    missing_pct: string
-  }>
-  kpi_cards: Array<{
-    title: string
-    values: Record<string, string>
-  }>
-  disclaimers: string[]
-}
-
-export interface CombineCompatibilityResult {
-  datasets: Array<{ id: string; name: string; row_count: number; columns: string[] }>
-  union: {
-    compatible: boolean
-    match_score_percent: number
-    common_columns: string[]
-    left_only_columns: string[]
-    right_only_columns: string[]
-    type_mismatches: Array<{ column: string; left_type: string; right_type: string }>
-    expected_row_count: number
-  }
-  join: {
-    has_candidates: boolean
-    candidate_keys: Array<{
-      key: string
-      left_dtype: string
-      right_dtype: string
-      left_unique: boolean
-      right_unique: boolean
-      left_nulls: number
-      right_nulls: number
-      relationship: string
-      risk: string
-      warning: string | null
-    }>
-    supported_join_types: string[]
-  }
-}
-
-export interface CombinePreviewResult {
-  operation: 'union' | 'join'
-  preview_rows: Array<Record<string, unknown>>
-  columns: string[]
-  total_preview_count: number
-  estimated_total_rows?: number
-  join_key?: string
-  join_type?: string
-  lineage?: Record<string, string>
-}
-
-export interface CrossDatasetInsightsResult {
-  mode: 'insights'
-  dataset_count: number
-  insights_count: number
-  insights: Array<{
-    title: string
-    finding: string
-    magnitude: string
-    source_datasets: string[]
-    fields_used: string[]
-    date_range: string
-    method: string
-    limitations: string
-  }>
-}
-
-export function listAnalysisSessions() {
-  return request<{ sessions: AnalysisSession[] }>('/api/analysis/sessions')
-}
-
-export function createAnalysisSession(data: { name: string; dataset_ids: string[]; mode?: string }) {
-  return request<AnalysisSession>('/api/analysis/sessions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-}
-
-export function getAnalysisSession(id: string) {
-  return request<AnalysisSession>(`/api/analysis/sessions/${id}`)
-}
-
-export function updateAnalysisSession(id: string, data: Partial<AnalysisSession>) {
-  return request<AnalysisSession>(`/api/analysis/sessions/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-}
-
-export function addDatasetsToSession(sessionId: string, datasetIds: string[]) {
-  return request<AnalysisSession>(`/api/analysis/sessions/${sessionId}/datasets`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataset_ids: datasetIds }),
-  })
-}
-
-export function removeDatasetFromSession(sessionId: string, datasetId: string) {
-  return request<AnalysisSession>(`/api/analysis/sessions/${sessionId}/datasets/${datasetId}`, {
-    method: 'DELETE',
-  })
-}
-
-export function deleteAnalysisSession(sessionId: string) {
-  return request<{ message: string; session_id: string }>(`/api/analysis/sessions/${sessionId}`, {
-    method: 'DELETE',
-  })
-}
-
-export function runDatasetComparison(datasetIds: string[]) {
-  return request<CompareResult>('/api/analysis/compare', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataset_ids: datasetIds }),
-  })
-}
-
-export function checkCombineCompatibility(datasetIds: string[]) {
-  return request<CombineCompatibilityResult>('/api/analysis/combine/compatibility', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataset_ids: datasetIds }),
-  })
-}
-
-export function previewCombine(params: { operation: 'union' | 'join'; dataset_ids: string[]; join_key?: string; join_type?: string; columns?: string[] }) {
-  return request<CombinePreviewResult>('/api/analysis/combine/preview', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  })
-}
-
-export function executeCombine(params: { operation: 'union' | 'join'; dataset_ids: string[]; output_name?: string; join_key?: string; join_type?: string; columns?: string[] }) {
-  return request<Dataset>('/api/analysis/combine/execute', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-  })
-}
-
-export function runCrossDatasetInsights(datasetIds: string[]) {
-  return request<CrossDatasetInsightsResult>('/api/analysis/insights', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dataset_ids: datasetIds }),
-  })
-}
-
 export function uploadDataset(file: File, name: string) {
   const form = new FormData(); form.append('file', file); form.append('name', name)
   return request<Dataset>('/api/datasets/upload', { method: 'POST', body: form })
 }
 
-export function uploadBatchDatasets(files: File[]) {
+export function uploadBatchDatasets(files: File[], sourceMode: 'FOLDER_COLLECTION' | 'EXPLICIT_MULTI_FILE_SELECTION' = 'EXPLICIT_MULTI_FILE_SELECTION') {
   const form = new FormData()
   files.forEach(f => form.append('files', f))
-  return request<BatchUploadResult>('/api/datasets/upload-batch', { method: 'POST', body: form })
+  form.append('source_mode', sourceMode)
+  return request<BatchUploadResult & { collection_id: string | null; source_mode: CollectionItem['source_mode'] }>('/api/datasets/upload-batch', { method: 'POST', body: form })
 }
 
 export function uploadZipDataset(file: File) {
   const form = new FormData()
   form.append('file', file)
-  return request<BatchUploadResult>('/api/datasets/upload-zip', { method: 'POST', body: form })
+  return request<BatchUploadResult & { collection_id: string; source_mode: CollectionItem['source_mode'] }>('/api/datasets/upload-zip', { method: 'POST', body: form })
 }
 
 export function updateDatasetSchema(id: string, schema: { fields: Record<string, string | null>; currency_code: string | null; domain: string; date_order?: string }) {
@@ -433,6 +295,70 @@ export function getForecast(periods = 30, target: 'orders' | 'revenue' = 'orders
   )
 }
 
+export interface ForecastObjective {
+  label: string
+  target_column: string | null
+  description: string
+  available: boolean
+}
+
+export interface ForecastOptions {
+  dataset_id: string
+  dataset_name: string
+  date_columns: string[]
+  target_columns: string[]
+  default_date_column?: string
+  default_target_column?: string
+  objectives?: Record<string, ForecastObjective>
+  compatible: boolean
+  reason?: string
+}
+
+export interface DatasetForecastResult {
+  status: string
+  compatible: boolean
+  reason?: string
+  dataset_id: string
+  dataset_name: string
+  target_column: string
+  date_column: string
+  grain: string
+  periods: number
+  historical: Array<{ date: string; actual: number }>
+  validation: Array<{ date: string; actual: number; predicted: number }>
+  forecast: Array<{ date: string; forecast: number; lower_bound: number; upper_bound: number }>
+  metrics: {
+    mae: number
+    rmse: number
+    mape: number
+    baseline_mae: number
+    baseline_rmse: number
+    total_forecast: number
+    avg_forecast: number
+  }
+  model_info: {
+    name: string
+    features: string[]
+    total_observations: number
+    train_samples: number
+    val_samples: number
+    split_date?: string
+  }
+}
+
+export function getForecastOptions() {
+  return getJson<ForecastOptions>('/api/ml/forecast/options')
+}
+
+export function generateDatasetForecast(payload: {
+  target_column?: string
+  date_column?: string
+  periods?: number
+  grain?: string
+}) {
+  return postJson<DatasetForecastResult>('/api/ml/forecast/dataset', payload)
+}
+
 export interface MlCompatibility {
   compatible: boolean
   reasons: string[]
@@ -531,11 +457,41 @@ export interface InsightsResponse {
   status: string
   provider: string | null
   role: string
+  dataset_id?: string | null
 }
 
 export function queryInsights(question: string, context_limit = 20, params: Record<string, string> = {}) {
   return postJson<InsightsResponse>(`/api/insights/query?${new URLSearchParams(params)}`, { question, context_limit })
 }
+
+export interface AutomatedInsight {
+  id?: string
+  type: string
+  title: string
+  finding: string
+  metric: string
+  confidence: 'High' | 'Medium' | 'Low'
+  basis?: string
+  time_period?: string
+  significance?: string
+  recommendation?: string
+}
+
+export interface AutomatedInsightsResponse {
+  dataset_id: string | null
+  dataset_name?: string
+  insights: AutomatedInsight[]
+}
+
+export function getAutomatedInsights(params: Record<string, string> = {}) {
+  const qs = new URLSearchParams(params).toString()
+  return getJson<AutomatedInsightsResponse>(`/api/analytics/automated-insights${qs ? `?${qs}` : ''}`)
+}
+
+export function getDatasetInsights(datasetId: string) {
+  return getJson<AutomatedInsightsResponse>(`/api/datasets/${encodeURIComponent(datasetId)}/insights`)
+}
+
 
 // ---- Reports ----
 

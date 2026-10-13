@@ -6,8 +6,11 @@ the database. No source column name is interpolated into a query.
 from __future__ import annotations
 
 import json
+import math
 from functools import wraps
 
+import numpy as np
+import pandas as pd
 from fastapi import HTTPException
 from sqlalchemy import DateTime, cast, func, select
 
@@ -180,6 +183,124 @@ class TabularSource:
                 "date_range": {k: str(v or "") for k, v in dates.items()}, "categories": [], "customer_states": [],
                 "seller_states": [], "order_statuses": [], "payment_types": [], "review_scores": []}
 
+    def correlations(self, limit_cols=6):
+        # Exclude IDs, surrogate keys, row numbers, and predicted artifact columns
+        ignore_patterns = ("_id", "id", "index", "row_num", "predicted_")
+        num_cols = [
+            c for c in self.columns
+            if c["dtype"] == "numeric"
+            and not c["name"].lower().startswith("predicted_")
+            and not c["name"].lower().endswith(("_id", "_idx", "_index"))
+            and c["name"].lower() not in ("id", "index", "row_number")
+        ][:limit_cols]
+        if len(num_cols) < 2:
+            return []
+        col_exprs = [self.by_name[c["name"]].label(c["name"]) for c in num_cols]
+        rows = self.rows(self.statement(*col_exprs).limit(5000))
+        if len(rows) < 3:
+            return []
+        df = pd.DataFrame(rows).dropna()
+        if len(df) < 3:
+            return []
+        corr_matrix = df.corr()
+        results = []
+        for i, c1 in enumerate(num_cols):
+            for c2 in num_cols[i + 1:]:
+                r = corr_matrix.loc[c1["name"], c2["name"]]
+                if pd.notna(r) and math.isfinite(r):
+                    results.append({
+                        "field1": c1["name"],
+                        "field2": c2["name"],
+                        "correlation": round(float(r), 3)
+                    })
+        return results
+
+    def box_plots(self, limit_cols=6):
+        num_cols = [
+            c for c in self.columns
+            if c["dtype"] == "numeric"
+            and not c["name"].lower().startswith("predicted_")
+            and not c["name"].lower().endswith(("_id", "_idx", "_index"))
+            and c["name"].lower() not in ("id", "index", "row_number")
+        ][:limit_cols]
+        plots = []
+        for c_info in num_cols:
+            c = self.by_name[c_info["name"]]
+            ordered = self.statement(c.label("v")).where(c.is_not(None)).order_by(c).subquery()
+            n = self.db.scalar(self.statement(func.count(c)).where(c.is_not(None)))
+            if not n or n < 4:
+                continue
+            q1_idx = max(0, int(n * 0.25))
+            q2_idx = max(0, int(n * 0.50))
+            q3_idx = max(0, int(n * 0.75))
+            q1_val = self.db.scalar(select(ordered.c.v).offset(q1_idx).limit(1))
+            median_val = self.db.scalar(select(ordered.c.v).offset(q2_idx).limit(1))
+            q3_val = self.db.scalar(select(ordered.c.v).offset(q3_idx).limit(1))
+            min_val = self.db.scalar(self.statement(func.min(c)))
+            max_val = self.db.scalar(self.statement(func.max(c)))
+            if q1_val is not None and q3_val is not None:
+                iqr = float(q3_val) - float(q1_val)
+                lower_whisker = max(float(min_val), float(q1_val) - 1.5 * iqr)
+                upper_whisker = min(float(max_val), float(q3_val) + 1.5 * iqr)
+                outlier_count = self.db.scalar(self.statement(func.count(c)).where((c < lower_whisker) | (c > upper_whisker))) or 0
+                plots.append({
+                    "field": c_info["name"],
+                    "min": round(float(min_val), 2) if min_val is not None else None,
+                    "q1": round(float(q1_val), 2),
+                    "median": round(float(median_val), 2) if median_val is not None else None,
+                    "q3": round(float(q3_val), 2),
+                    "max": round(float(max_val), 2) if max_val is not None else None,
+                    "iqr": round(iqr, 2),
+                    "lower_whisker": round(lower_whisker, 2),
+                    "upper_whisker": round(upper_whisker, 2),
+                    "outlier_count": int(outlier_count),
+                })
+        return plots
+
+    def histograms(self, limit_cols=2, num_bins=10):
+        num_cols = [c for c in self.columns if c["dtype"] == "numeric"][:limit_cols]
+        hists = []
+        for c_info in num_cols:
+            c = self.by_name[c_info["name"]]
+            min_val = self.db.scalar(self.statement(func.min(c)))
+            max_val = self.db.scalar(self.statement(func.max(c)))
+            if min_val is None or max_val is None or min_val == max_val:
+                continue
+            vals = [float(r["v"]) for r in self.rows(self.statement(c.label("v")).where(c.is_not(None)).limit(10000)) if r.get("v") is not None]
+            if not vals:
+                continue
+            counts, bin_edges = np.histogram(vals, bins=num_bins)
+            bins_data = []
+            for idx in range(len(counts)):
+                bins_data.append({
+                    "bin_start": round(float(bin_edges[idx]), 2),
+                    "bin_end": round(float(bin_edges[idx + 1]), 2),
+                    "label": f"{round(float(bin_edges[idx]), 1)} - {round(float(bin_edges[idx + 1]), 1)}",
+                    "count": int(counts[idx]),
+                })
+            hists.append({
+                "field": c_info["name"],
+                "bins": bins_data,
+            })
+        return hists
+
+    def scatter_data(self, limit_points=100):
+        num_cols = [c for c in self.columns if c["dtype"] == "numeric"]
+        if len(num_cols) < 2:
+            return None
+        x_col, y_col = num_cols[0], num_cols[1]
+        x_expr, y_expr = self.by_name[x_col["name"]], self.by_name[y_col["name"]]
+        rows = self.rows(
+            self.statement(x_expr.label("x"), y_expr.label("y"))
+            .where(x_expr.is_not(None), y_expr.is_not(None))
+            .limit(limit_points)
+        )
+        return {
+            "x_field": x_col["name"],
+            "y_field": y_col["name"],
+            "points": [{"x": round(float(r["x"]), 2), "y": round(float(r["y"]), 2)} for r in rows if r.get("x") is not None and r.get("y") is not None]
+        }
+
     def view(self, section, grain=None):
         capability = self.ds.capabilities.get(section, {"available": True})
         if not capability["available"]:
@@ -219,6 +340,8 @@ class TabularSource:
         return {"dataset_id": self.ds.id, "dataset_name": self.ds.name, "status": "available", "section": section,
                 "filters": self.f.as_dict(), "kpis": kpis, "metric_cards": cards, "numeric_statistics": numeric,
                 "distributions": distributions, "entities": entities, "time_series": self.time_series(grain=grain),
+                "correlations": self.correlations(), "box_plots": self.box_plots(), "histograms": self.histograms(),
+                "scatter": self.scatter_data(),
                 "currency_code": self.ds.semantics.get("currency_code"), "capabilities": self.ds.capabilities,
                 "quality": self.ds.quality, "delivery": delivery}
 

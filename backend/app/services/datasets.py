@@ -22,7 +22,7 @@ from fastapi import HTTPException
 from sqlalchemy import Column, Float, Integer, MetaData, String, Table, Text, func, inspect, select
 from sqlalchemy.orm import Session
 
-from app.models.dataset import Dataset, DatasetSelection, AnalysisSession
+from app.models.dataset import AnalyticalSourceSelection, Dataset, DatasetSelection
 from app.core.config import settings
 
 MAX_BYTES = settings.DATASET_MAX_BYTES
@@ -35,6 +35,8 @@ MAX_BATCH_FILES = settings.DATASET_MAX_BATCH_FILES
 MAX_BATCH_BYTES = settings.DATASET_MAX_BATCH_BYTES
 MAX_EXTRACTED_BYTES = settings.DATASET_MAX_EXTRACTED_BYTES
 MAX_EXTRACTED_FILES = settings.DATASET_MAX_EXTRACTED_FILES
+MAX_ZIP_DEPTH = settings.DATASET_MAX_ZIP_DEPTH
+MAX_COMPRESSION_RATIO = settings.DATASET_MAX_COMPRESSION_RATIO
 REFERENCE_ID = "00000000-0000-0000-0000-000000000001"
 
 EXECUTABLE_EXTENSIONS = {
@@ -89,7 +91,7 @@ def inspect_and_extract_zip(raw_zip: bytes) -> list[tuple[str, bytes, str]]:
         raise HTTPException(413, f"ZIP uncompressed content exceeds the safety limit of {MAX_EXTRACTED_BYTES // (1024 * 1024)} MB.")
 
     # Zip bomb ratio protection
-    if len(raw_zip) > 0 and (total_uncompressed / max(1, len(raw_zip))) > 100:
+    if len(raw_zip) > 0 and (total_uncompressed / max(1, len(raw_zip))) > MAX_COMPRESSION_RATIO:
         raise HTTPException(413, "ZIP compression ratio exceeds safety limits (possible zip bomb).")
 
     extracted_files: list[tuple[str, bytes, str]] = []
@@ -100,6 +102,15 @@ def inspect_and_extract_zip(raw_zip: bytes) -> list[tuple[str, bytes, str]]:
         # Path traversal checks
         if ".." in filename or filename.startswith("/") or filename.startswith("\\") or ":" in filename or "\x00" in filename:
             raise HTTPException(422, f"Path traversal detected in ZIP entry: {filename}")
+
+        # Check for symbolic links (POSIX S_IFLNK)
+        if (info.external_attr >> 16) & 0o170000 == 0o120000:
+            raise HTTPException(422, f"Symbolic links are not permitted in ZIP archive: {filename}")
+
+        # Check nesting depth
+        clean_entry = filename.replace("\\", "/").strip("/")
+        if clean_entry.count("/") > MAX_ZIP_DEPTH:
+            raise HTTPException(422, f"ZIP entry exceeds maximum allowed folder nesting depth of {MAX_ZIP_DEPTH}: {filename}")
 
         # Check for executables
         ext = Path(filename).suffix.lower()
@@ -149,7 +160,7 @@ def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive
         if total_uncompressed > MAX_EXTRACTED_BYTES:
             raise HTTPException(413, f"ZIP uncompressed content ({total_uncompressed // (1024 * 1024)} MB) exceeds the safety limit of {MAX_EXTRACTED_BYTES // (1024 * 1024)} MB.")
 
-        if stat.st_size > 0 and (total_uncompressed / max(1, stat.st_size)) > 100:
+        if stat.st_size > 0 and (total_uncompressed / max(1, stat.st_size)) > MAX_COMPRESSION_RATIO:
             raise HTTPException(413, "ZIP compression ratio exceeds safety limits (possible zip bomb).")
 
         supported_extensions = {".csv", ".xlsx", ".xls", ".json"}
@@ -157,6 +168,13 @@ def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive
             filename = info.filename
             if ".." in filename or filename.startswith("/") or filename.startswith("\\") or ":" in filename or "\x00" in filename:
                 raise HTTPException(422, f"Path traversal detected in ZIP entry: {filename}")
+            # Check for symbolic links (POSIX S_IFLNK)
+            if (info.external_attr >> 16) & 0o170000 == 0o120000:
+                raise HTTPException(422, f"Symbolic links are not permitted in ZIP archive: {filename}")
+            # Check nesting depth
+            clean_entry = filename.replace("\\", "/").strip("/")
+            if clean_entry.count("/") > MAX_ZIP_DEPTH:
+                raise HTTPException(422, f"ZIP entry exceeds maximum allowed folder nesting depth of {MAX_ZIP_DEPTH}: {filename}")
             ext = Path(filename).suffix.lower()
             if ext in EXECUTABLE_EXTENSIONS:
                 raise HTTPException(422, f"Executable files are not permitted in ZIP archive: {filename}")
@@ -164,6 +182,7 @@ def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive
                 raise HTTPException(422, f"Encrypted or password-protected entries are not supported: {filename}")
 
         successful_datasets = []
+        collection_id = str(uuid.uuid4())
         errors = []
         skipped_files = []
         used_names: set[str] = set()
@@ -198,7 +217,11 @@ def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive
                 unique_name = unique_dataset_name(db, user["username"], stem, used_names)
                 used_names.add(unique_name)
                 file_bytes = archive.read(info)
-                ds = ingest(db, user, unique_name, file_bytes, ext, provenance={"archive": archive_name, "relative_path": info.filename})
+                ds = ingest(db, user, unique_name, file_bytes, ext, provenance={
+                    "source_mode": "ZIP_COLLECTION", "collection_id": collection_id,
+                    "collection_name": archive_name, "archive": archive_name,
+                    "relative_path": info.filename,
+                })
                 if ds.status == "FAILED":
                     errors.append({"path": info.filename, "error": ds.error or "Dataset processing failed."})
                 else:
@@ -208,6 +231,7 @@ def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive
 
         return {
             "archive_name": archive_name,
+            "collection_id": collection_id,
             "archive_size": stat.st_size,
             "files_discovered": len(infolist),
             "supported_files": len(supported_entries),
@@ -262,7 +286,7 @@ def ensure_registry(db: Session):
     bind = db.get_bind()
     Dataset.__table__.create(bind, checkfirst=True)
     DatasetSelection.__table__.create(bind, checkfirst=True)
-    AnalysisSession.__table__.create(bind, checkfirst=True)
+    AnalyticalSourceSelection.__table__.create(bind, checkfirst=True)
     if not db.get(Dataset, REFERENCE_ID) and "fact_orders" in inspect(bind).get_table_names():
         from sqlalchemy import text
         n = db.scalar(text("SELECT COUNT(*) FROM fact_orders"))
@@ -320,9 +344,42 @@ def authorized(db, dataset_id, user, ready=False):
     return ds
 
 
+def collection_members(db, collection_id, user, ready=True):
+    """Resolve a collection by its persisted opaque ID and enforce owner scope."""
+    ensure_registry(db)
+    members = db.scalars(select(Dataset).where(
+        Dataset.owner == user["username"],
+    ).order_by(Dataset.created_at, Dataset.id)).all()
+    members = [d for d in members if (d.profile or {}).get("provenance", {}).get("collection_id") == collection_id]
+    if not members:
+        raise HTTPException(404, "Collection not found.")
+    if ready and any(d.status != "READY" for d in members):
+        raise HTTPException(409, "Collection processing is incomplete. Review its file-level status before analysis.")
+    return members
+
+
+def resolve_collection(db, user, collection_id):
+    members = collection_members(db, collection_id, user)
+    db.info["source_mode"] = (members[0].profile or {}).get("provenance", {}).get("source_mode", "ZIP_COLLECTION")
+    db.info["collection_id"] = collection_id
+    db.info["collection_datasets"] = members
+    # Kept only as an explicit compatibility handle for endpoints that have not
+    # yet migrated to collection metrics; these callers must not silently run.
+    return members
+
+
 def resolve(db, user, requested=None):
     ensure_registry(db)
     selection = db.get(DatasetSelection, user["username"])
+    source_selection = db.get(AnalyticalSourceSelection, user["username"])
+    if requested is None and source_selection and source_selection.source_mode in {"ZIP_COLLECTION", "FOLDER_COLLECTION"}:
+        members = resolve_collection(db, user, source_selection.source_id)
+        ds = members[0]
+        db.info["dataset"] = ds
+        return ds
+    db.info["source_mode"] = "INDIVIDUAL_FILE"
+    db.info.pop("collection_id", None)
+    db.info.pop("collection_datasets", None)
     dataset_id = requested or (selection.dataset_id if selection else None)
     if not dataset_id:
         # Migration initializes existing users to the registered reference once.
@@ -382,17 +439,28 @@ def parse_source(raw, suffix):
         if "\x00" in content:
             raise ValueError("CSV contains invalid binary content.")
         try:
-            dialect = csv.Sniffer().sniff(content[:8192], delimiters=",;\t|")
+            sample = content[:16384]
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
         except csv.Error:
             dialect = csv.excel
-        reader = csv.reader(io.StringIO(content), dialect, strict=True)
+        # Ensure standard doublequote and quotechar handling
+        reader = csv.reader(
+            io.StringIO(content),
+            dialect=dialect,
+            doublequote=True,
+            escapechar="\\",
+            skipinitialspace=True,
+        )
         names = _headers(next(reader, []))
         rows = []
-        for row in reader:
+        malformed_count = 0
+        for line_no, row in enumerate(reader, start=2):
             if not row:
                 continue
             if len(row) != len(names):
-                raise ValueError("CSV rows must have the same number of fields as the header.")
+                malformed_count += 1
+                # If a single row is genuinely malformed, raise precise diagnostic or skip if empty padding
+                raise ValueError(f"CSV row {line_no} has {len(row)} fields; expected {len(names)} matching header.")
             if len(rows) >= MAX_ROWS:
                 raise ValueError(f"Dataset exceeds the {MAX_ROWS} row limit.")
             if (len(rows) + 1) * len(names) > MAX_CELLS:

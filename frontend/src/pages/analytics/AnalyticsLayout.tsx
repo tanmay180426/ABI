@@ -17,7 +17,7 @@ export default function AnalyticsLayout() {
       <div>
         <h1 className="text-2xl font-semibold">Analytics</h1>
         <p className="text-sm text-neutral-500">
-          In-depth analysis of the active dataset.
+          In-depth analysis of the active dataset and multi-file collections.
         </p>
       </div>
 

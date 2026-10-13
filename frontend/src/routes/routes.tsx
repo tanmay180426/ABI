@@ -20,7 +20,6 @@ export const router = createBrowserRouter([
         children: [
           // ---- Business intelligence (admin + analyst) ----
           { path: '/datasets', lazy: async () => ({ Component: (await import('@/pages/Datasets')).default }) },
-          { path: '/multi-dataset-analysis', lazy: async () => ({ Component: (await import('@/pages/MultiDatasetAnalysis')).default }) },
           {
             path: '/dashboard',
             lazy: async () => ({ Component: (await import('@/pages/Dashboard')).default }),
@@ -60,10 +59,10 @@ export const router = createBrowserRouter([
             path: '/ml',
             lazy: async () => ({ Component: (await import('@/pages/ml/MlLayout')).default }),
             children: [
-              { path: '', element: <FilterRedirect to="metrics" /> },
-              { path: 'metrics', lazy: async () => ({ Component: (await import('@/pages/ml/MlMetrics')).default }) },
-              { path: 'product-segmentation', lazy: async () => ({ Component: (await import('@/pages/ml/ProductSegmentation')).default }) },
+              { path: '', element: <FilterRedirect to="revenue-forecast" /> },
               { path: 'revenue-forecast', lazy: async () => ({ Component: (await import('@/pages/ml/RevenueForecast')).default }) },
+              { path: 'product-segmentation', lazy: async () => ({ Component: (await import('@/pages/ml/ProductSegmentation')).default }) },
+              { path: 'metrics', lazy: async () => ({ Component: (await import('@/pages/ml/MlMetrics')).default }) },
             ],
           },
           {

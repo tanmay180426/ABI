@@ -508,3 +508,389 @@ def validate_output(value):
             validate_output(v)
     elif isinstance(value, numbers.Real) and not math.isfinite(float(value)):
         raise ValueError("Model returned a non-finite prediction.")
+
+
+def forecast_options(db) -> dict:
+    """Return available temporal and numeric columns for forecasting in the active dataset."""
+    ds = db.info.get("dataset")
+    if not ds:
+        return {"date_columns": [], "target_columns": [], "compatible": False, "reason": "No dataset active."}
+
+    date_cols: list[str] = []
+    num_cols: list[str] = []
+
+    if ds.adapter == "star_schema":
+        date_cols = ["purchase_date"]
+        num_cols = ["revenue", "orders", "customers", "items_sold"]
+        objectives = {
+            "revenue": {
+                "label": "Revenue Forecasting",
+                "target_column": "revenue",
+                "description": "Predict gross monetary volume and cash flow trajectories.",
+                "available": True,
+            },
+            "customers": {
+                "label": "Customer Activity Forecasting",
+                "target_column": "customers",
+                "description": "Predict distinct active customer engagement and account demand.",
+                "available": True,
+            },
+            "product_sales": {
+                "label": "Product Sales & Unit Demand",
+                "target_column": "orders",
+                "description": "Predict transaction volume and item demand across product lines.",
+                "available": True,
+            },
+        }
+    else:
+        columns = ds.profile.get("columns", [])
+        for c in columns:
+            if c.get("dtype") == "datetime":
+                date_cols.append(c["name"])
+            elif c.get("dtype") == "numeric" and c.get("role") != "identifier":
+                num_cols.append(c["name"])
+
+        # Detect revenue, customer, and product sales objectives
+        revenue_target = None
+        customer_target = None
+        sales_target = None
+
+        if ds.semantics and ds.semantics.get("fields"):
+            fields = ds.semantics["fields"]
+            revenue_target = fields.get("revenue") or fields.get("currency") or fields.get("price") or fields.get("total")
+            customer_target = fields.get("customer") or fields.get("user")
+            sales_target = fields.get("quantity") or fields.get("units")
+
+        if not revenue_target:
+            revenue_target = next((c for c in num_cols if any(k in c.lower() for k in ["revenue", "price", "amount", "sales", "total"])), None)
+        if not customer_target:
+            customer_target = next((c for c in num_cols if any(k in c.lower() for k in ["customer", "user", "order", "count", "client"])), None)
+        if not sales_target:
+            sales_target = next((c for c in num_cols if any(k in c.lower() for k in ["quantity", "qty", "unit", "item", "volume"])), None)
+
+        objectives = {
+            "revenue": {
+                "label": "Revenue Forecasting",
+                "target_column": revenue_target or (num_cols[0] if num_cols else None),
+                "description": "Predict gross monetary turnover and future cash flow trajectories.",
+                "available": bool(revenue_target),
+            },
+            "customers": {
+                "label": "Customer Activity Forecasting",
+                "target_column": customer_target or (num_cols[0] if num_cols else None),
+                "description": "Predict distinct customer counts and user activity.",
+                "available": bool(customer_target),
+            },
+            "product_sales": {
+                "label": "Product Sales & Unit Demand",
+                "target_column": sales_target or (num_cols[0] if num_cols else None),
+                "description": "Predict units sold and inventory demand volume.",
+                "available": bool(sales_target),
+            },
+        }
+
+    default_date = ds.semantics.get("fields", {}).get("date") if ds.semantics else None
+    if not default_date and date_cols:
+        default_date = date_cols[0]
+
+    default_target = ds.semantics.get("fields", {}).get("revenue") if ds.semantics else None
+    if not default_target and ds.semantics:
+        default_target = ds.semantics.get("fields", {}).get("currency") or ds.semantics.get("fields", {}).get("price") or ds.semantics.get("fields", {}).get("quantity")
+    if not default_target and num_cols:
+        default_target = num_cols[0]
+
+    compatible = bool(date_cols and num_cols)
+    reason = None if compatible else "Dataset must have at least one confirmed date column and one numeric measure column."
+
+    return {
+        "dataset_id": ds.id,
+        "dataset_name": ds.name,
+        "date_columns": date_cols,
+        "target_columns": num_cols,
+        "default_date_column": default_date,
+        "default_target_column": default_target,
+        "objectives": objectives,
+        "compatible": compatible,
+        "reason": reason,
+    }
+
+
+def dataset_forecast(db, target_column: str | None = None, date_column: str | None = None, periods: int = 30, grain: str = "day") -> dict:
+    """Universal evidence-based time series forecasting for any compatible dataset.
+
+    Features are time-aware and engineered without data leakage. Uses chronological
+    train/validation splits, compares against a seasonal-naive baseline, and computes
+    95% prediction intervals.
+    """
+    import numpy as np
+    import pandas as pd
+    from sklearn.ensemble import GradientBoostingRegressor
+    from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+    ds = db.info.get("dataset")
+    if not ds:
+        raise ValueError("Dataset context is required for forecasting.")
+
+    opts = forecast_options(db)
+    if not opts["compatible"]:
+        return {
+            "status": "not_applicable",
+            "compatible": False,
+            "reason": opts["reason"],
+            "dataset_id": ds.id,
+            "dataset_name": ds.name,
+        }
+
+    date_col_name = date_column or opts["default_date_column"]
+    target_col_name = target_column or opts["default_target_column"]
+
+    if not date_col_name or not target_col_name:
+        return {
+            "status": "not_applicable",
+            "compatible": False,
+            "reason": "Could not determine valid date and target columns.",
+            "dataset_id": ds.id,
+            "dataset_name": ds.name,
+        }
+
+    # Extract historical time series
+    if ds.adapter == "star_schema":
+        from app.analytics import metrics
+        from app.analytics.filters import Filters
+        target_name = "orders" if target_col_name == "orders" else ("customers" if target_col_name == "customers" else "revenue")
+        raw_points = metrics.time_series(db, Filters(), "day", limit=100_000)
+        if not raw_points:
+            return {"status": "not_applicable", "compatible": False, "reason": "No historical observations found."}
+        df_records = []
+        for p in raw_points:
+            val = p.get(target_name)
+            if val is None:
+                val = p.get("orders") if target_name in ("orders", "customers") else p.get("revenue")
+            df_records.append({"date": p["period"], "target": float(val or 0.0)})
+        df = pd.DataFrame(df_records).dropna()
+    else:
+        from app.analytics.tabular import TabularSource
+        source = TabularSource(db)
+        if date_col_name not in source.by_name or target_col_name not in source.by_name:
+            return {"status": "not_applicable", "compatible": False, "reason": "Selected columns do not exist in dataset."}
+        d_expr = source.by_name[date_col_name]
+        t_expr = source.by_name[target_col_name]
+        from sqlalchemy import func
+        rows = source.rows(
+            source.statement(d_expr.label("period"), func.sum(t_expr).label("target"))
+            .where(d_expr.is_not(None), t_expr.is_not(None))
+            .group_by(d_expr)
+            .order_by(d_expr)
+        )
+        if not rows:
+            return {"status": "not_applicable", "compatible": False, "reason": "No historical observations found."}
+        df = pd.DataFrame(rows).rename(columns={"period": "date"}).dropna()
+
+    df["date"] = pd.to_datetime(df["date"], utc=True, errors="coerce")
+    df = df.dropna(subset=["date"])
+    df = df.sort_values("date").drop_duplicates("date").set_index("date")
+
+    # Determine frequency mapping
+    grain_str = str(grain).lower().strip()
+    if grain_str in ("w", "week", "weekly"):
+        target_freq = "W-MON"
+    elif grain_str in ("m", "month", "monthly"):
+        target_freq = "MS"
+    else:
+        target_freq = "D"
+
+    df = df.resample(target_freq).sum().fillna(0.0)
+
+    min_obs = 6 if target_freq in ("W-MON", "MS") else 14
+    if len(df) < min_obs:
+        return {
+            "status": "not_applicable",
+            "compatible": False,
+            "reason": f"Insufficient historical continuity ({len(df)} {grain} observations found; minimum {min_obs} required).",
+            "dataset_id": ds.id,
+            "dataset_name": ds.name,
+        }
+
+    # Feature engineering (strictly lag-based to prevent lookahead leakage)
+    target_series = df["target"].astype(float)
+    features_df = pd.DataFrame(index=df.index)
+
+    if target_freq == "W-MON":
+        features_df["lag1"] = target_series.shift(1)
+        features_df["lag2"] = target_series.shift(2)
+        features_df["lag4"] = target_series.shift(4)
+        features_df["roll_mean4"] = target_series.shift(1).rolling(4).mean()
+        features_df["month"] = features_df.index.month
+    elif target_freq == "MS":
+        features_df["lag1"] = target_series.shift(1)
+        features_df["lag2"] = target_series.shift(2)
+        features_df["lag3"] = target_series.shift(3)
+        features_df["roll_mean3"] = target_series.shift(1).rolling(3).mean()
+        features_df["month"] = features_df.index.month
+    else:
+        features_df["lag1"] = target_series.shift(1)
+        features_df["lag7"] = target_series.shift(7)
+        features_df["lag14"] = target_series.shift(14)
+        features_df["roll_mean7"] = target_series.shift(1).rolling(7).mean()
+        features_df["day_of_week"] = features_df.index.dayofweek
+        features_df["day_of_month"] = features_df.index.day
+        features_df["month"] = features_df.index.month
+
+    # Drop warm-up rows
+    clean_idx = features_df.dropna().index
+    X = features_df.loc[clean_idx]
+    y = target_series.loc[clean_idx]
+
+    min_clean = 3 if target_freq in ("W-MON", "MS") else 7
+    if len(X) < min_clean:
+        return {
+            "status": "not_applicable",
+            "compatible": False,
+            "reason": "Insufficient observations after lag feature construction.",
+            "dataset_id": ds.id,
+            "dataset_name": ds.name,
+        }
+
+    # Chronological split
+    val_size = max(2 if target_freq in ("W-MON", "MS") else 7, int(len(X) * 0.2))
+    split_idx = len(X) - val_size
+    if split_idx < min_clean:
+        split_idx = len(X) // 2
+
+    X_train, y_train = X.iloc[:split_idx], y.iloc[:split_idx]
+    X_val, y_val = X.iloc[split_idx:], y.iloc[split_idx:]
+
+    # Baseline: seasonal-naive or recent lag
+    if "lag7" in X_val.columns:
+        y_baseline = X_val["lag7"].fillna(X_val["lag1"]).values
+    elif "lag4" in X_val.columns:
+        y_baseline = X_val["lag4"].fillna(X_val["lag1"]).values
+    else:
+        y_baseline = X_val["lag1"].values
+
+    base_mae = float(mean_absolute_error(y_val, y_baseline))
+    base_rmse = float(np.sqrt(mean_squared_error(y_val, y_baseline)))
+
+    # Candidate Model: GradientBoostingRegressor
+    model = GradientBoostingRegressor(n_estimators=100, max_depth=3, learning_rate=0.08, random_state=42)
+    model.fit(X_train, y_train)
+
+    y_val_pred = model.predict(X_val)
+    val_mae = float(mean_absolute_error(y_val, y_val_pred))
+    val_rmse = float(np.sqrt(mean_squared_error(y_val, y_val_pred)))
+
+    # Compute MAPE on non-zero observations
+    non_zero = y_val > 0
+    if non_zero.any():
+        val_mape = float(np.mean(np.abs((y_val[non_zero] - y_val_pred[non_zero]) / y_val[non_zero])) * 100)
+    else:
+        val_mape = 0.0
+
+    residuals = y_val.values - y_val_pred
+    std_resid = float(np.std(residuals)) if len(residuals) > 1 else float(np.std(y_train))
+
+    # Refit model on the entire dataset for final future forecasting
+    model_full = GradientBoostingRegressor(n_estimators=100, max_depth=3, learning_rate=0.08, random_state=42)
+    model_full.fit(X, y)
+
+    # Recursive future forecast
+    history_vals = list(target_series.values)
+    forecast_points = []
+    periods_clamped = min(90, max(1, periods))
+    last_date = df.index.max()
+
+    for step in range(periods_clamped):
+        if target_freq == "D":
+            future_day = last_date + pd.Timedelta(days=step + 1)
+        elif target_freq == "W-MON":
+            future_day = last_date + pd.Timedelta(weeks=step + 1)
+        else: # MS
+            future_day = last_date + pd.DateOffset(months=step + 1)
+
+        win = np.array(history_vals, dtype=float)
+
+        if target_freq == "W-MON":
+            feats = {
+                "lag1": win[-1],
+                "lag2": win[-2] if len(win) >= 2 else win[-1],
+                "lag4": win[-4] if len(win) >= 4 else win[-1],
+                "roll_mean4": float(np.mean(win[-4:])) if len(win) >= 4 else win[-1],
+                "month": future_day.month,
+            }
+        elif target_freq == "MS":
+            feats = {
+                "lag1": win[-1],
+                "lag2": win[-2] if len(win) >= 2 else win[-1],
+                "lag3": win[-3] if len(win) >= 3 else win[-1],
+                "roll_mean3": float(np.mean(win[-3:])) if len(win) >= 3 else win[-1],
+                "month": future_day.month,
+            }
+        else:
+            feats = {
+                "lag1": win[-1],
+                "lag7": win[-7] if len(win) >= 7 else win[-1],
+                "lag14": win[-14] if len(win) >= 14 else win[-1],
+                "roll_mean7": float(np.mean(win[-7:])) if len(win) >= 7 else win[-1],
+                "day_of_week": future_day.dayofweek,
+                "day_of_month": future_day.day,
+                "month": future_day.month,
+            }
+
+        row = pd.DataFrame([feats], columns=X.columns)
+        yhat = max(0.0, float(model_full.predict(row)[0]))
+        history_vals.append(yhat)
+
+        # 95% Confidence interval
+        lower = max(0.0, yhat - 1.96 * std_resid)
+        upper = yhat + 1.96 * std_resid
+
+        forecast_points.append({
+            "date": future_day.strftime("%Y-%m-%d"),
+            "forecast": round(yhat, 2),
+            "lower_bound": round(lower, 2),
+            "upper_bound": round(upper, 2),
+        })
+
+    # Historical sample for charting (tail 60 periods)
+    hist_tail = [
+        {"date": d.strftime("%Y-%m-%d"), "actual": round(float(v), 2)}
+        for d, v in zip(df.index[-60:], target_series.values[-60:])
+    ]
+
+    # Validation comparison records
+    val_records = [
+        {"date": d.strftime("%Y-%m-%d"), "actual": round(float(act), 2), "predicted": round(float(pred), 2)}
+        for d, act, pred in zip(X_val.index, y_val, y_val_pred)
+    ]
+
+    return {
+        "status": "available",
+        "compatible": True,
+        "dataset_id": ds.id,
+        "dataset_name": ds.name,
+        "target_column": target_col_name,
+        "date_column": date_col_name,
+        "grain": grain,
+        "periods": periods_clamped,
+        "historical": hist_tail,
+        "validation": val_records,
+        "forecast": forecast_points,
+        "metrics": {
+            "mae": round(val_mae, 2),
+            "rmse": round(val_rmse, 2),
+            "mape": round(val_mape, 1),
+            "baseline_mae": round(base_mae, 2),
+            "baseline_rmse": round(base_rmse, 2),
+            "total_forecast": round(sum(p["forecast"] for p in forecast_points), 2),
+            "avg_forecast": round(float(np.mean([p["forecast"] for p in forecast_points])), 2),
+        },
+        "model_info": {
+            "name": "Time-Aware Autoregressive Gradient Regressor",
+            "features": list(X.columns),
+            "total_observations": len(df),
+            "train_samples": len(X_train),
+            "val_samples": len(X_val),
+            "split_date": X_val.index[0].strftime("%Y-%m-%d") if len(X_val) else None,
+        },
+    }
+

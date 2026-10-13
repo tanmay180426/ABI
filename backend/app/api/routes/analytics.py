@@ -105,3 +105,18 @@ def sellers(
 @router.get("/delivery")
 def delivery(f: Filters = Depends(analytics_filters), db: Session = Depends(get_db)):
     return metrics.delivery(db, f)
+
+
+@router.get("/automated-insights")
+def automated_insights(f: Filters = Depends(analytics_filters), db: Session = Depends(get_db)):
+    """Generate evidence-based analytical insights for the currently selected dataset."""
+    ds = db.info.get("dataset")
+    if not ds:
+        return {"insights": [], "dataset_id": None}
+    from app.analytics.insights_engine import generate_dataset_insights
+    return {
+        "dataset_id": ds.id,
+        "dataset_name": ds.name,
+        "insights": generate_dataset_insights(db, ds, f)
+    }
+

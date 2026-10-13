@@ -10,18 +10,22 @@ from sqlalchemy import select
 
 from app.api.deps import require_bi_user
 from app.database.deps import get_db
-from app.models.dataset import Dataset, DatasetSelection
+from app.models.dataset import AnalyticalSourceSelection, Dataset, DatasetSelection
 from app.services import datasets as service
 
 import tempfile
+import uuid
 
 router = APIRouter()
 
 
 def dataset_context(request: Request, db=Depends(get_db), user=Depends(require_bi_user),
-                    x_dataset_id: str | None = Header(None), dataset_id: str | None = None):
+                    x_dataset_id: str | None = Header(None), x_collection_id: str | None = Header(None),
+                    dataset_id: str | None = None):
     if x_dataset_id and dataset_id and x_dataset_id != dataset_id:
         raise HTTPException(422, "Conflicting dataset identifiers.")
+    if x_collection_id and (x_dataset_id or dataset_id):
+        raise HTTPException(422, "Select either an individual dataset or a collection, not both.")
     allowed = {"dataset_id", "date_from", "date_to", "category", "customer_state", "seller_state", "order_status",
                "payment_type", "review_score", "column_filters", "grain", "limit", "periods", "target", "report"}
     if any(k not in allowed for k in request.query_params):
@@ -31,7 +35,100 @@ def dataset_context(request: Request, db=Depends(get_db), user=Depends(require_b
         parse_filters(grain=request.query_params["grain"])
     if request.url.path.startswith("/api/ml") and request.query_params.get("grain", "day") != "day":
         raise HTTPException(422, "ML inference uses daily history or entity aggregates. Remove the unsupported time grain filter.")
+    if x_collection_id:
+        members = service.resolve_collection(db, user, x_collection_id)
+        representative = members[0]
+        db.info["dataset"] = representative
+        return representative
     return service.resolve(db, user, x_dataset_id or dataset_id)
+
+
+@router.get("/limits")
+def get_limits():
+    return {
+        "max_bytes": service.MAX_BYTES,
+        "max_bytes_mb": service.MAX_BYTES // (1024 * 1024),
+        "max_zip_bytes": service.MAX_ZIP_BYTES,
+        "max_zip_bytes_mb": service.MAX_ZIP_BYTES // (1024 * 1024),
+        "max_batch_bytes": service.MAX_BATCH_BYTES,
+        "max_batch_bytes_mb": service.MAX_BATCH_BYTES // (1024 * 1024),
+        "max_batch_files": service.MAX_BATCH_FILES,
+        "max_extracted_bytes": service.MAX_EXTRACTED_BYTES,
+        "max_extracted_bytes_mb": service.MAX_EXTRACTED_BYTES // (1024 * 1024),
+        "max_extracted_files": service.MAX_EXTRACTED_FILES,
+        "max_rows": service.MAX_ROWS,
+        "max_columns": service.MAX_COLUMNS,
+        "max_cells": service.MAX_CELLS,
+        "max_zip_depth": service.MAX_ZIP_DEPTH,
+        "max_compression_ratio": service.MAX_COMPRESSION_RATIO,
+        "supported_file_types": [".csv", ".json", ".xlsx", ".xls"],
+        "supported_archive_types": [".zip"],
+    }
+
+
+@router.get("/collections")
+def get_collections(db=Depends(get_db), user=Depends(require_bi_user)):
+    service.ensure_registry(db)
+    datasets = db.scalars(
+        select(Dataset).where((Dataset.owner == user["username"]) | Dataset.owner.is_(None))
+        .order_by(Dataset.created_at.desc())
+    ).all()
+    collections_map: dict[str, dict] = {}
+    for d in datasets:
+        pub = service.public(d)
+        prov = pub.get("provenance", {})
+        collection_id = prov.get("collection_id")
+        coll_name = prov.get("collection_name") or prov.get("archive")
+        if not collection_id:
+            # Legacy uploads lack a stable membership key. Keep each standalone
+            # dataset isolated instead of guessing membership from filenames.
+            collection_id = f"legacy:{d.id}"
+            coll_name = coll_name or d.name
+        source_mode = prov.get("source_mode", "INDIVIDUAL_FILE")
+        source_type = "zip" if source_mode == "ZIP_COLLECTION" else ("folder" if source_mode == "FOLDER_COLLECTION" else "single")
+        group_key = collection_id
+        if group_key not in collections_map:
+            collections_map[group_key] = {
+                "collection_id": collection_id,
+                "collection_name": coll_name,
+                "source_mode": source_mode,
+                "source_type": source_type,
+                "dataset_count": 0,
+                "total_rows": 0,
+                "dataset_ids": [],
+                "datasets": [],
+            }
+        c_entry = collections_map[group_key]
+        c_entry["dataset_count"] += 1
+        c_entry["total_rows"] += d.row_count or 0
+        c_entry["dataset_ids"].append(d.id)
+        c_entry["datasets"].append(pub)
+
+    return {"collections": list(collections_map.values())}
+
+
+@router.post("/collections/{collection_id}/select")
+def select_collection(collection_id: str, db=Depends(get_db), user=Depends(require_bi_user)):
+    members = service.collection_members(db, collection_id, user)
+    source_mode = (members[0].profile or {}).get("provenance", {}).get("source_mode")
+    if source_mode not in {"ZIP_COLLECTION", "FOLDER_COLLECTION"}:
+        raise HTTPException(422, "This source is an individual dataset, not a collection.")
+    current = db.get(AnalyticalSourceSelection, user["username"])
+    if current:
+        current.source_mode, current.source_id = source_mode, collection_id
+        current.updated_at = datetime.now(timezone.utc)
+    else:
+        db.add(AnalyticalSourceSelection(username=user["username"], source_mode=source_mode, source_id=collection_id))
+    # Keep legacy callers' selection pointer aligned for existing display code.
+    selection = db.get(DatasetSelection, user["username"])
+    if selection:
+        selection.dataset_id = members[0].id
+    else:
+        db.add(DatasetSelection(username=user["username"], dataset_id=members[0].id))
+    db.commit()
+    return {"collection_id": collection_id, "source_mode": source_mode,
+            "collection_name": (members[0].profile or {}).get("provenance", {}).get("collection_name"),
+            "datasets": [service.public(d) for d in members]}
 
 
 @router.get("")
@@ -43,8 +140,13 @@ def list_datasets(db=Depends(get_db), user=Depends(require_bi_user)):
     if not selection and any(d.id == service.REFERENCE_ID for d in datasets):
         service.resolve(db, user)
         selection = db.get(DatasetSelection, user["username"])
+    source_selection = db.get(AnalyticalSourceSelection, user["username"])
     return {"datasets": [service.public(d) for d in datasets],
-            "active_dataset_id": selection.dataset_id if selection else None}
+            "active_dataset_id": selection.dataset_id if selection else None,
+            "active_source": ({"source_mode": source_selection.source_mode,
+                               "source_id": source_selection.source_id}
+                              if source_selection else {"source_mode": "INDIVIDUAL_FILE",
+                                                       "source_id": selection.dataset_id if selection else None})}
 
 
 @router.post("/upload", status_code=201)
@@ -71,6 +173,7 @@ def upload(file: UploadFile = File(...), name: str = Form(..., min_length=1, max
 
 @router.post("/upload-batch", status_code=200)
 def upload_batch(files: list[UploadFile] = File(...),
+                 source_mode: Literal["FOLDER_COLLECTION", "EXPLICIT_MULTI_FILE_SELECTION"] = Form("EXPLICIT_MULTI_FILE_SELECTION"),
                  db=Depends(get_db), user=Depends(require_bi_user)):
     if not files:
         raise HTTPException(422, "No files uploaded.")
@@ -82,6 +185,11 @@ def upload_batch(files: list[UploadFile] = File(...),
     skipped = []
     used_names: set[str] = set()
     total_batch_bytes = 0
+    collection_id = str(uuid.uuid4()) if source_mode == "FOLDER_COLLECTION" else None
+    folder_roots = {((f.filename or "").replace("\\", "/").split("/", 1)[0]) for f in files}
+    if source_mode == "FOLDER_COLLECTION" and (len(folder_roots) != 1 or any("/" not in (f.filename or "").replace("\\", "/") for f in files)):
+        raise HTTPException(422, "Folder collections require files with a shared relative-path root.")
+    collection_name = next(iter(folder_roots)) if collection_id else None
 
     for f in files:
         raw_filename = (f.filename or "").replace("\\", "/")
@@ -116,9 +224,11 @@ def upload_batch(files: list[UploadFile] = File(...),
             used_names.add(unique_name)
 
             provenance = {
-                "source_type": "folder_upload" if "/" in raw_filename else "batch_upload",
+                "source_type": "folder_upload" if collection_id else "batch_upload",
                 "original_filename": clean_filename,
                 "relative_path": raw_filename,
+                **({"source_mode": source_mode, "collection_id": collection_id,
+                    "collection_name": collection_name} if collection_id else {"source_mode": source_mode}),
             }
             ds = service.ingest(db, user, unique_name, raw, suffix, provenance=provenance)
             if ds.status == "FAILED":
@@ -138,6 +248,8 @@ def upload_batch(files: list[UploadFile] = File(...),
         "skipped_files": skipped,
         "errors": errors,
         "total_files": len(files),
+        "collection_id": collection_id,
+        "source_mode": source_mode,
     }
 
 
@@ -187,6 +299,12 @@ def select_dataset(dataset_id: str, db=Depends(get_db), user=Depends(require_bi_
     else:
         db.add(DatasetSelection(username=user["username"], dataset_id=ds.id))
     db.commit()
+    source_selection = db.get(AnalyticalSourceSelection, user["username"])
+    if source_selection:
+        source_selection.source_mode = "INDIVIDUAL_FILE"
+        source_selection.source_id = ds.id
+        source_selection.updated_at = datetime.now(timezone.utc)
+        db.commit()
     return service.public(ds)
 
 
@@ -255,3 +373,16 @@ def delete_dataset(dataset_id: str, db=Depends(get_db), user=Depends(require_bi_
     # Subsequent calls fail visibly instead of silently reverting to reference.
     db.delete(ds)
     db.commit()
+
+
+@router.get("/{dataset_id}/insights")
+def dataset_insights(dataset_id: str, db=Depends(get_db), user=Depends(require_bi_user)):
+    service.ensure_registry(db)
+    ds = service.authorized(db, dataset_id, user, ready=True)
+    from app.analytics.insights_engine import generate_dataset_insights
+    return {
+        "dataset_id": ds.id,
+        "dataset_name": ds.name,
+        "insights": generate_dataset_insights(db, ds)
+    }
+
