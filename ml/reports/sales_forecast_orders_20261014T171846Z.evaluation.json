@@ -1,0 +1,444 @@
+{
+  "schema_version": 1,
+  "model": "sales_forecast_orders",
+  "selected_candidate": "LinearRegression",
+  "selection_metric": "validation MAE",
+  "target_definition": "daily order count",
+  "frequency": "daily",
+  "forecast_strategy": "one-step-ahead expanding-window validation and holdout with observed preceding history; production horizon uses recursive predictions",
+  "features": [
+    "lag1",
+    "lag7",
+    "lag14",
+    "lag30",
+    "roll7",
+    "roll30"
+  ],
+  "candidate_configurations": {
+    "LinearRegression": {
+      "copy_X": true,
+      "fit_intercept": true,
+      "n_jobs": null,
+      "positive": false
+    },
+    "Ridge(alpha=10)": {
+      "alpha": 10.0,
+      "copy_X": true,
+      "fit_intercept": true,
+      "max_iter": null,
+      "positive": false,
+      "random_state": null,
+      "solver": "auto",
+      "tol": 0.0001
+    },
+    "RandomForestRegressor": {
+      "bootstrap": true,
+      "ccp_alpha": 0.0,
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_leaf_nodes": null,
+      "max_samples": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 3,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "monotonic_cst": null,
+      "n_estimators": 200,
+      "n_jobs": 1,
+      "oob_score": false,
+      "random_state": 42,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "GradientBoostingRegressor": {
+      "alpha": 0.9,
+      "ccp_alpha": 0.0,
+      "criterion": "friedman_mse",
+      "init": null,
+      "learning_rate": 0.05,
+      "loss": "squared_error",
+      "max_depth": 2,
+      "max_features": null,
+      "max_leaf_nodes": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "n_estimators": 100,
+      "n_iter_no_change": null,
+      "random_state": 42,
+      "subsample": 1.0,
+      "tol": 0.0001,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "HistGradientBoostingRegressor": {
+      "categorical_features": "warn",
+      "early_stopping": "auto",
+      "interaction_cst": null,
+      "l2_regularization": 0.0,
+      "learning_rate": 0.05,
+      "loss": "squared_error",
+      "max_bins": 255,
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_iter": 100,
+      "max_leaf_nodes": 15,
+      "min_samples_leaf": 20,
+      "monotonic_cst": null,
+      "n_iter_no_change": 10,
+      "quantile": null,
+      "random_state": 42,
+      "scoring": "loss",
+      "tol": 1e-07,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    }
+  },
+  "split_fractions": {
+    "training_before_validation": 0.6,
+    "validation": 0.2,
+    "holdout": 0.2
+  },
+  "random_seed": 42,
+  "training_period": [
+    "2016-10-04",
+    "2017-12-23"
+  ],
+  "validation_period": [
+    "2017-12-24",
+    "2018-05-21"
+  ],
+  "holdout_period": [
+    "2018-05-22",
+    "2018-10-17"
+  ],
+  "n_training": 446,
+  "n_validation": 149,
+  "n_holdout": 149,
+  "production_training_period": [
+    "2016-10-04",
+    "2018-10-17"
+  ],
+  "n_production_training": 744,
+  "validation_metrics": {
+    "SeasonalNaive7": {
+      "mae": 34.4631,
+      "rmse": 47.0334,
+      "mape": 16.1649,
+      "mape_excluded_count": 0,
+      "r2": 0.2916,
+      "wape": 14.8226,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "LinearRegression": {
+      "mae": 31.8763,
+      "rmse": 42.5682,
+      "mape": 16.2016,
+      "mape_excluded_count": 0,
+      "r2": 0.4198,
+      "wape": 13.71,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "Ridge(alpha=10)": {
+      "mae": 31.8763,
+      "rmse": 42.568,
+      "mape": 16.2016,
+      "mape_excluded_count": 0,
+      "r2": 0.4198,
+      "wape": 13.71,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "RandomForestRegressor": {
+      "mae": 36.5886,
+      "rmse": 52.4049,
+      "mape": 16.7628,
+      "mape_excluded_count": 0,
+      "r2": 0.1206,
+      "wape": 15.7368,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "GradientBoostingRegressor": {
+      "mae": 56.6682,
+      "rmse": 93.7361,
+      "mape": 24.7524,
+      "mape_excluded_count": 0,
+      "r2": -1.8136,
+      "wape": 24.3731,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "HistGradientBoostingRegressor": {
+      "mae": 50.5616,
+      "rmse": 67.3764,
+      "mape": 23.5553,
+      "mape_excluded_count": 0,
+      "r2": -0.4537,
+      "wape": 21.7466,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    }
+  },
+  "validation_windows": [
+    {
+      "validation_period": [
+        "2017-12-24",
+        "2018-02-10"
+      ],
+      "training_rows": 446,
+      "metrics": {
+        "SeasonalNaive7": {
+          "mae": 36.6327,
+          "rmse": 55.3451,
+          "mape": 20.3837,
+          "mape_excluded_count": 0,
+          "r2": 0.1855,
+          "wape": 17.1688,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "LinearRegression": {
+          "mae": 32.3769,
+          "rmse": 46.9345,
+          "mape": 21.7628,
+          "mape_excluded_count": 0,
+          "r2": 0.4143,
+          "wape": 15.1743,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "Ridge(alpha=10)": {
+          "mae": 32.3768,
+          "rmse": 46.9341,
+          "mape": 21.7626,
+          "mape_excluded_count": 0,
+          "r2": 0.4143,
+          "wape": 15.1742,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "RandomForestRegressor": {
+          "mae": 48.5149,
+          "rmse": 70.6106,
+          "mape": 24.5417,
+          "mape_excluded_count": 0,
+          "r2": -0.3257,
+          "wape": 22.7377,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "GradientBoostingRegressor": {
+          "mae": 88.3041,
+          "rmse": 139.8529,
+          "mape": 39.9881,
+          "mape_excluded_count": 0,
+          "r2": -4.2006,
+          "wape": 41.386,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "HistGradientBoostingRegressor": {
+          "mae": 83.1125,
+          "rmse": 99.3486,
+          "mape": 41.9886,
+          "mape_excluded_count": 0,
+          "r2": -1.6244,
+          "wape": 38.9528,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        }
+      }
+    },
+    {
+      "validation_period": [
+        "2018-02-11",
+        "2018-04-01"
+      ],
+      "training_rows": 495,
+      "metrics": {
+        "SeasonalNaive7": {
+          "mae": 35.6,
+          "rmse": 41.3023,
+          "mape": 14.9456,
+          "mape_excluded_count": 0,
+          "r2": -0.0163,
+          "wape": 14.963,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "LinearRegression": {
+          "mae": 25.8833,
+          "rmse": 32.993,
+          "mape": 10.9797,
+          "mape_excluded_count": 0,
+          "r2": 0.3515,
+          "wape": 10.879,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "Ridge(alpha=10)": {
+          "mae": 25.8833,
+          "rmse": 32.993,
+          "mape": 10.9797,
+          "mape_excluded_count": 0,
+          "r2": 0.3515,
+          "wape": 10.879,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "RandomForestRegressor": {
+          "mae": 29.0057,
+          "rmse": 38.4688,
+          "mape": 12.1641,
+          "mape_excluded_count": 0,
+          "r2": 0.1184,
+          "wape": 12.1913,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "GradientBoostingRegressor": {
+          "mae": 34.3822,
+          "rmse": 44.7072,
+          "mape": 14.2772,
+          "mape_excluded_count": 0,
+          "r2": -0.1907,
+          "wape": 14.4511,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "HistGradientBoostingRegressor": {
+          "mae": 32.7857,
+          "rmse": 41.8509,
+          "mape": 13.4723,
+          "mape_excluded_count": 0,
+          "r2": -0.0435,
+          "wape": 13.7801,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        }
+      }
+    },
+    {
+      "validation_period": [
+        "2018-04-02",
+        "2018-05-21"
+      ],
+      "training_rows": 545,
+      "metrics": {
+        "SeasonalNaive7": {
+          "mae": 31.2,
+          "rmse": 43.4106,
+          "mape": 13.2499,
+          "mape_excluded_count": 0,
+          "r2": 0.4418,
+          "wape": 12.6912,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "LinearRegression": {
+          "mae": 37.3788,
+          "rmse": 46.396,
+          "mape": 15.9736,
+          "mape_excluded_count": 0,
+          "r2": 0.3624,
+          "wape": 15.2045,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "Ridge(alpha=10)": {
+          "mae": 37.3788,
+          "rmse": 46.3959,
+          "mape": 15.9736,
+          "mape_excluded_count": 0,
+          "r2": 0.3624,
+          "wape": 15.2045,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "RandomForestRegressor": {
+          "mae": 32.4839,
+          "rmse": 42.637,
+          "mape": 13.7381,
+          "mape_excluded_count": 0,
+          "r2": 0.4615,
+          "wape": 13.2134,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "GradientBoostingRegressor": {
+          "mae": 47.951,
+          "rmse": 70.8326,
+          "mape": 20.2967,
+          "mape_excluded_count": 0,
+          "r2": -0.4862,
+          "wape": 19.505,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "HistGradientBoostingRegressor": {
+          "mae": 36.4376,
+          "rmse": 45.8662,
+          "mape": 15.5737,
+          "mape_excluded_count": 0,
+          "r2": 0.3769,
+          "wape": 14.8217,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        }
+      }
+    }
+  ],
+  "holdout_metrics": {
+    "SeasonalNaive7": {
+      "mae": 43.7785,
+      "rmse": 65.8353,
+      "mape": 100.0275,
+      "mape_excluded_count": 46,
+      "r2": 0.654,
+      "wape": 32.1267,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "LinearRegression": {
+      "mae": 28.4562,
+      "rmse": 38.7427,
+      "mape": 61.3451,
+      "mape_excluded_count": 46,
+      "r2": 0.8802,
+      "wape": 20.8825,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "Ridge(alpha=10)": {
+      "mae": 28.4564,
+      "rmse": 38.7429,
+      "mape": 61.3457,
+      "mape_excluded_count": 46,
+      "r2": 0.8802,
+      "wape": 20.8826,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "RandomForestRegressor": {
+      "mae": 32.3625,
+      "rmse": 47.5643,
+      "mape": 65.5054,
+      "mape_excluded_count": 46,
+      "r2": 0.8194,
+      "wape": 23.7491,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "GradientBoostingRegressor": {
+      "mae": 31.653,
+      "rmse": 42.2216,
+      "mape": 76.8709,
+      "mape_excluded_count": 46,
+      "r2": 0.8577,
+      "wape": 23.2284,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "HistGradientBoostingRegressor": {
+      "mae": 32.1901,
+      "rmse": 42.4004,
+      "mape": 68.6437,
+      "mape_excluded_count": 46,
+      "r2": 0.8565,
+      "wape": 23.6225,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    }
+  },
+  "holdout_predictions_file": "sales_forecast_orders_20261014T171846Z.holdout.csv",
+  "data_source": "D:\\College Project\\Trunal_BI_Git\\ml\\data\\processed\\daily_series.csv",
+  "data_sha256": "d35be60d2d5b558d020f1535cc4f7be15e922d3dcac39c9a25ac6587bed6fcc5",
+  "versions": {
+    "python": "3.13.5",
+    "pandas": "2.2.3",
+    "numpy": "2.1.3",
+    "scikit_learn": "1.5.2",
+    "joblib": "1.4.2"
+  },
+  "evaluated_at": "2026-10-14T17:18:46.003772+00:00",
+  "training_run_id": "20261014T171846Z",
+  "artifact": "sales_forecast_orders_20261014T171846Z.joblib",
+  "artifact_sha256": "21241ca5c3bb688626319a9faa9d717d0ce703c79dc6e5a31dca52466fc6a73a"
+}

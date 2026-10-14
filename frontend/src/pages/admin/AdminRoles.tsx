@@ -23,14 +23,14 @@ export default function AdminRoles() {
 
   return (
     <div className="space-y-6">
-      <p className="text-neutral-400 text-sm max-w-3xl">
+      <p className="text-neutral-400 text-sm max-w-none">
         The platform operates on a strict two-role model. Viewer does not exist.
         Administrative operations are securely protected by the backend.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {roles.map((r) => (
-          <div key={r.name} className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-5">
+          <div key={r.name} className="abi-panel border border-neutral-800 rounded-lg p-5">
             <h2 className="text-lg font-semibold uppercase tracking-wide text-neutral-200 mb-2">
               <span className={r.name === 'admin' ? 'text-amber-400' : 'text-emerald-400'}>
                 {r.name}

@@ -92,7 +92,7 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-medium">Users</h2>
           <span className="text-xs text-neutral-500">{users.length} accounts</span>
@@ -166,7 +166,7 @@ export default function AdminUsers() {
 
       <form
         onSubmit={create}
-        className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4 space-y-3"
+        className="abi-panel border border-neutral-800 rounded-lg p-4 space-y-3"
       >
         <h2 className="font-medium">Create user</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
@@ -196,6 +196,7 @@ export default function AdminUsers() {
           <label className="flex flex-col gap-1">
             Role
             <select
+              aria-label="New user role"
               value={newRole}
               onChange={(e) => setNewRole(e.target.value as Role)}
               className="bg-neutral-800 rounded px-3 py-1.5"

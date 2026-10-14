@@ -1,5 +1,9 @@
 # Universal dataset implementation and verification report
 
+Historical verification record. Current upload limits and bundle behavior
+supersede the October 7 limits below; see UNIVERSAL_DATASETS.md and
+OLIST_IMPLEMENTATION_REPORT.md for the current 200 MiB contract.
+
 Verified locally on 7 October 2026. Companion operational documentation:
 [UNIVERSAL_DATASETS.md](UNIVERSAL_DATASETS.md).
 

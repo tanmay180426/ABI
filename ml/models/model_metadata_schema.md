@@ -15,4 +15,6 @@ roles, expected data types, training domain, monetary units, minimum
 observations, frequency, feature transformations, supported filters, and output
 type. The backend checks this contract before loading artifacts. A compatible
 schema is not a measurement of generalization accuracy on a new dataset.
-Training/evaluation metrics retain their original Olist scope.
+Training/evaluation metrics use the unified extended Olist scope, including
+observations labeled synthetic/generated in the supplied generation summary.
+Their mixed provenance does not establish real-world accuracy.

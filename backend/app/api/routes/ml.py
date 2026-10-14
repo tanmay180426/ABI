@@ -25,7 +25,21 @@ def ml_status(db=Depends(get_db), f=Depends(analytics_filters)):
         for model in feature["models"]:
             model["compatibility"] = ml_service.compatibility(model["name"], db, f)
             model["metrics_scope"] = "Offline training/evaluation on Olist; not an evaluation of the selected dataset."
-    return {"features": features, "dataset_id": db.info["dataset"].id}
+    candidates = []
+    candidate_path = ml_service.REPO_ROOT / 'ml/candidates/abi-revenue/provenance.json'
+    if candidate_path.is_file():
+        import json
+        candidate = json.loads(candidate_path.read_text(encoding='utf-8'))
+        candidates.append({'name':'abi_gradient_boosting_revenue','status':'blocked','models':[{
+            'name':'abi_gradient_boosting_revenue','algorithm':'GradientBoostingRegressor (source candidate)',
+            'trained_at':None,
+            'artifact_available':(candidate_path.parent/'gradient_boosting_sales_model.joblib').is_file(),
+            'runtime_ready':False,'runtime_reason':'Inactive source candidate: verified training/preprocessing and provenance inputs are missing; it is not loaded in this API process.',
+            'metrics':None,'metrics_scope':'Source evaluation claims are not reproducible and are not selected-dataset metrics.',
+            'compatibility':{'compatible':False,'reasons':candidate.get('missing_evidence',[]),'contract':{},'training_domain':None},
+            'source_commit':candidate.get('source_commit'),'artifact_sha256':candidate.get('artifact_sha256')
+        }]})
+    return {"features": features, "source_candidates": candidates, "dataset_id": db.info["dataset"].id}
 
 
 @router.get("/models/{name}")
@@ -60,6 +74,18 @@ def ml_forecast(periods: int = 30, target: str = "orders", db=Depends(get_db), f
     return _infer(f"sales_forecast_{target}", db, f, lambda: ml_service.forecast(periods, target, db, f))
 
 
+@router.get("/forecast/evaluation")
+def ml_forecast_evaluation(target: str = "orders"):
+    if target not in ("orders", "revenue"):
+        raise HTTPException(status_code=400, detail="target must be orders or revenue")
+    try:
+        return ml_service.forecast_evaluation(target)
+    except FileNotFoundError:
+        raise HTTPException(503, "A reproducible holdout evaluation is not available for this target.") from None
+    except (ValueError, KeyError, IndexError):
+        raise HTTPException(503, "The registered holdout evaluation is invalid or incomplete.") from None
+
+
 @router.get("/segments/customers")
 def ml_customer_segments(db=Depends(get_db), f=Depends(analytics_filters)):
     return _infer("customer_segmentation", db, f, lambda: ml_service.customer_segments(db, f))
@@ -81,29 +107,3 @@ def ml_product_segmentation(
     db=Depends(get_db)
 ):
     return _infer("product_segmentation", db, f, lambda: ml_service.product_segments(db, f))
-
-
-class DatasetForecastRequest(BaseModel):
-    target_column: str | None = None
-    date_column: str | None = None
-    periods: int = Field(default=30, ge=1, le=90)
-    grain: str = "day"
-
-
-@router.get("/forecast/options")
-def ml_forecast_options(db=Depends(get_db)):
-    """Return available temporal and numerical columns for forecasting."""
-    return ml_service.forecast_options(db)
-
-
-@router.post("/forecast/dataset")
-def ml_dataset_forecast(payload: DatasetForecastRequest = DatasetForecastRequest(), db=Depends(get_db)):
-    """Universal forecasting engine for any active dataset with time-series observations."""
-    return ml_service.dataset_forecast(
-        db,
-        target_column=payload.target_column,
-        date_column=payload.date_column,
-        periods=payload.periods,
-        grain=payload.grain,
-    )
-

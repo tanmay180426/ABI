@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import Column, String, Integer, JSON, LargeBinary, DateTime
+from sqlalchemy.orm import deferred
 from app.database.session import Base
 
 
@@ -23,7 +24,9 @@ class Dataset(Base):
     quality = Column(JSON, default=dict)
     error = Column(String(500), nullable=True)
     # Bounded uploads preserved privately; never included in public metadata.
-    raw_source = Column(LargeBinary, nullable=True)
+    # Catalog/analytics reads must never load hundreds of MiB of private source
+    # blobs. Schema reparsing explicitly lazy-loads only its selected table.
+    raw_source = deferred(Column(LargeBinary, nullable=True))
 
 
 class DatasetSelection(Base):
@@ -32,11 +35,10 @@ class DatasetSelection(Base):
     dataset_id = Column(String(36), nullable=False)
 
 
-class AnalyticalSourceSelection(Base):
-    """Explicitly persist whether a user's source is a collection or one file."""
-    __tablename__ = "app_analytical_source_selection"
-    username = Column(String(120), primary_key=True)
-    source_mode = Column(String(32), nullable=False)
-    source_id = Column(String(36), nullable=False)
-    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
+class DatasetBundleTable(Base):
+    """Additive catalog: existing Dataset rows remain the unit of analysis."""
+    __tablename__ = "app_dataset_bundle_table"
+    dataset_id = Column(String(36), primary_key=True)
+    bundle_id = Column(String(36), nullable=False, index=True)
+    relative_path = Column(String(500), nullable=False)
+    internal_name = Column(String(200), nullable=False)

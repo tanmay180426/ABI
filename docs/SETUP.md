@@ -1,5 +1,8 @@
 # Local setup
 
+For fresh Windows onboarding, use [LOCAL_SETUP_WINDOWS.md](LOCAL_SETUP_WINDOWS.md)
+and its explicit missing-model/reference limitations and new isolated verification.
+
 ## Runtime and dependencies
 
 Release verification used Node.js 20.19.4 and Python 3.13.5 on Windows.
@@ -12,15 +15,15 @@ python -m pip install -r requirements-dev.txt
 cd ../ml
 python -m pip install -r requirements-dev.txt
 cd ../frontend
-npm install
+npm ci
 cd ..
 ```
 
 ## Environment
 
-Copy `.env.example` to an ignored `.env` if needed. Its example DATABASE_URL
-targets PostgreSQL; for the verified SQLite workflow set
-`DATABASE_URL=sqlite:///./sem5.db` and always start the API from `backend`.
+Copy `.env.example` to an ignored `.env` if needed, without overwriting an existing
+file. Its current example uses SQLite; the default and documented legacy alias
+resolve to the stable `backend/sem5.db` even from a different launch directory.
 Choose a local signing key and local account passwords. Existing users keep their
 stored password hashes; changing seed settings does not reset existing accounts.
 Never commit `.env`, private uploads, databases or raw datasets.
@@ -59,6 +62,14 @@ run `python run_all.py` from `ml`. The six artifacts cover five feature families
 uploads and release tests never invoke training.
 
 ## Verification
+
+Folder/ZIP uploads accept a 200 MiB aggregate payload, with separate expansion
+and row/cell/time budgets documented in UNIVERSAL_DATASETS.md. Run one API worker
+for local imports. Large uploads use status-tracked jobs with cancellation and
+browser resume. Existing `.env` values override defaults; verify the effective
+values at `/api/datasets/upload-limits` after restart. ML artifacts must be at
+`ML_MODELS_DIR` (default `ml/models`), not a metadata-only fixture directory.
+Uploading data never trains or replaces a model.
 
 See TESTING.md for all test commands. Full reference/model verification requires
 the loaded reference and local saved binaries; a fresh clone alone is insufficient.

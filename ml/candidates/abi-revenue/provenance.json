@@ -1,0 +1,40 @@
+{
+  "candidate_id": "abi_gradient_boosting_revenue",
+  "activation_status": "blocked",
+  "source_repository": "https://github.com/tanmay180426/ABI.git",
+  "source_branch": "main",
+  "source_commit": "f1d2a5a7c1b70ee9092403af5873e5c624f193c9",
+  "source_artifact": "ml/models/gradient_boosting_sales_model.joblib",
+  "artifact_sha256": "e248090a7a66b2dbbdab7c431924af1036bac2b2691e80a1547df60726fa117a",
+  "artifact_bytes": 1237274,
+  "attribution": "Tanmay / tanmay180426; preserved from ABI with user-confirmed permission to copy and adapt.",
+  "license": "No LICENSE found in audited source; copy/adapt permission confirmed by project owner. This checkpoint retains attribution; it does not redistribute the binary.",
+  "dataset_provenance": {
+    "user_reported": "Original Olist history extended to approximately eight years using synthetic records.",
+    "verified_in_repository": false,
+    "real_synthetic_record_markers": "missing",
+    "generation_script": "missing",
+    "currency": "Original Olist BRL; source registry claims BRL, synthetic units not verified."
+  },
+  "missing_evidence": [
+    "Actual Gradient Boosting training and preprocessing code",
+    "Synthetic-data generation and real/synthetic combination provenance",
+    "Revenue target definition and synthetic currency/unit verification",
+    "Exact time-ordered training/test split and evaluation dataset",
+    "Baseline and reproducible evaluation protocol"
+  ],
+  "model_loading": "Passed inside non-root, network-disabled Docker with read-only filesystem/artifact mounts and resource limits; Windows host deserialization was rejected and not bypassed.",
+  "computational_validation": "Estimator settings and 27-feature order match metadata; one constructed feature vector gives finite output; malformed and infinite-valued vectors rejected. Training preprocessing and performance remain unverified.",
+  "isolated_runtime": {
+    "python": "3.13",
+    "scikit_learn": "1.6.1",
+    "numpy": "2.1.3",
+    "pandas": "2.2.3",
+    "joblib": "1.4.2"
+  },
+  "metrics": "Historical unverified source metadata only, not reproduced and not comparable to existing Olist evaluation.",
+  "automatic_registration": false,
+  "retrained": false,
+  "replaces_existing_model": false,
+  "distribution": "Source checkpoint includes metadata, provenance and historical smoke evidence only. Candidate binary is local-only and excluded; separate artifact-distribution approval is required."
+}

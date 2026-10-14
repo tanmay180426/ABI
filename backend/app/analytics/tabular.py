@@ -6,11 +6,8 @@ the database. No source column name is interpolated into a query.
 from __future__ import annotations
 
 import json
-import math
 from functools import wraps
 
-import numpy as np
-import pandas as pd
 from fastapi import HTTPException
 from sqlalchemy import DateTime, cast, func, select
 
@@ -107,28 +104,11 @@ class TabularSource:
         return self.rows(self.statement(*expressions).where(col.is_not(None)).group_by(col)
                          .order_by(func.count().desc(), col).limit(limit))
 
-    def time_series(self, grain=None, limit=400):
+    def time_series(self, grain="month", limit=400):
         from sqlalchemy import literal_column
         col = self.field("date")
         if col is None:
             return []
-        if not grain:
-            if self.f and self.f.date_from and self.f.date_to:
-                from datetime import date
-                try:
-                    d_from = date.fromisoformat(self.f.date_from)
-                    d_to = date.fromisoformat(self.f.date_to)
-                    delta_days = (d_to - d_from).days
-                    if delta_days <= 31:
-                        grain = "day"
-                    elif delta_days <= 90:
-                        grain = "week"
-                    else:
-                        grain = "month"
-                except Exception:
-                    grain = "month"
-            else:
-                grain = "month"
         # Identifiers are generated c0..c99; dialect function is whitelisted.
         expression = f"{self.table.name}.{col.name}"
         if self.db.get_bind().dialect.name == "postgresql":
@@ -140,34 +120,8 @@ class TabularSource:
             cols.append(func.sum(amount).label("revenue" if self.field("revenue") is not None else "amount"))
         if order is not None:
             cols.append(func.count(func.distinct(order)).label("orders"))
-        rows = self.rows(self.statement(*cols).where(col.is_not(None)).group_by(period).order_by(period.desc())
-                          .limit(limit))[::-1]
-        if grain == "day" and self.f and self.f.date_from and self.f.date_to:
-            from datetime import date, timedelta
-            try:
-                start_d = date.fromisoformat(self.f.date_from)
-                end_d = date.fromisoformat(self.f.date_to)
-                if start_d <= end_d and (end_d - start_d).days <= 1000:
-                    raw_map = {r["period"]: r for r in rows if r.get("period")}
-                    filled = []
-                    cur = start_d
-                    rev_key = "revenue" if self.field("revenue") is not None else "amount"
-                    while cur <= end_d:
-                        cur_str = cur.isoformat()
-                        if cur_str in raw_map:
-                            filled.append(raw_map[cur_str])
-                        else:
-                            empty_row = {"period": cur_str, "rows": 0}
-                            if amount is not None:
-                                empty_row[rev_key] = 0.0
-                            if order is not None:
-                                empty_row["orders"] = 0
-                            filled.append(empty_row)
-                        cur += timedelta(days=1)
-                    return filled
-            except Exception:
-                pass
-        return rows
+        return self.rows(self.statement(*cols).where(col.is_not(None)).group_by(period).order_by(period.desc())
+                         .limit(limit))[::-1]
 
     def filters(self):
         filters = []
@@ -183,125 +137,7 @@ class TabularSource:
                 "date_range": {k: str(v or "") for k, v in dates.items()}, "categories": [], "customer_states": [],
                 "seller_states": [], "order_statuses": [], "payment_types": [], "review_scores": []}
 
-    def correlations(self, limit_cols=6):
-        # Exclude IDs, surrogate keys, row numbers, and predicted artifact columns
-        ignore_patterns = ("_id", "id", "index", "row_num", "predicted_")
-        num_cols = [
-            c for c in self.columns
-            if c["dtype"] == "numeric"
-            and not c["name"].lower().startswith("predicted_")
-            and not c["name"].lower().endswith(("_id", "_idx", "_index"))
-            and c["name"].lower() not in ("id", "index", "row_number")
-        ][:limit_cols]
-        if len(num_cols) < 2:
-            return []
-        col_exprs = [self.by_name[c["name"]].label(c["name"]) for c in num_cols]
-        rows = self.rows(self.statement(*col_exprs).limit(5000))
-        if len(rows) < 3:
-            return []
-        df = pd.DataFrame(rows).dropna()
-        if len(df) < 3:
-            return []
-        corr_matrix = df.corr()
-        results = []
-        for i, c1 in enumerate(num_cols):
-            for c2 in num_cols[i + 1:]:
-                r = corr_matrix.loc[c1["name"], c2["name"]]
-                if pd.notna(r) and math.isfinite(r):
-                    results.append({
-                        "field1": c1["name"],
-                        "field2": c2["name"],
-                        "correlation": round(float(r), 3)
-                    })
-        return results
-
-    def box_plots(self, limit_cols=6):
-        num_cols = [
-            c for c in self.columns
-            if c["dtype"] == "numeric"
-            and not c["name"].lower().startswith("predicted_")
-            and not c["name"].lower().endswith(("_id", "_idx", "_index"))
-            and c["name"].lower() not in ("id", "index", "row_number")
-        ][:limit_cols]
-        plots = []
-        for c_info in num_cols:
-            c = self.by_name[c_info["name"]]
-            ordered = self.statement(c.label("v")).where(c.is_not(None)).order_by(c).subquery()
-            n = self.db.scalar(self.statement(func.count(c)).where(c.is_not(None)))
-            if not n or n < 4:
-                continue
-            q1_idx = max(0, int(n * 0.25))
-            q2_idx = max(0, int(n * 0.50))
-            q3_idx = max(0, int(n * 0.75))
-            q1_val = self.db.scalar(select(ordered.c.v).offset(q1_idx).limit(1))
-            median_val = self.db.scalar(select(ordered.c.v).offset(q2_idx).limit(1))
-            q3_val = self.db.scalar(select(ordered.c.v).offset(q3_idx).limit(1))
-            min_val = self.db.scalar(self.statement(func.min(c)))
-            max_val = self.db.scalar(self.statement(func.max(c)))
-            if q1_val is not None and q3_val is not None:
-                iqr = float(q3_val) - float(q1_val)
-                lower_whisker = max(float(min_val), float(q1_val) - 1.5 * iqr)
-                upper_whisker = min(float(max_val), float(q3_val) + 1.5 * iqr)
-                outlier_count = self.db.scalar(self.statement(func.count(c)).where((c < lower_whisker) | (c > upper_whisker))) or 0
-                plots.append({
-                    "field": c_info["name"],
-                    "min": round(float(min_val), 2) if min_val is not None else None,
-                    "q1": round(float(q1_val), 2),
-                    "median": round(float(median_val), 2) if median_val is not None else None,
-                    "q3": round(float(q3_val), 2),
-                    "max": round(float(max_val), 2) if max_val is not None else None,
-                    "iqr": round(iqr, 2),
-                    "lower_whisker": round(lower_whisker, 2),
-                    "upper_whisker": round(upper_whisker, 2),
-                    "outlier_count": int(outlier_count),
-                })
-        return plots
-
-    def histograms(self, limit_cols=2, num_bins=10):
-        num_cols = [c for c in self.columns if c["dtype"] == "numeric"][:limit_cols]
-        hists = []
-        for c_info in num_cols:
-            c = self.by_name[c_info["name"]]
-            min_val = self.db.scalar(self.statement(func.min(c)))
-            max_val = self.db.scalar(self.statement(func.max(c)))
-            if min_val is None or max_val is None or min_val == max_val:
-                continue
-            vals = [float(r["v"]) for r in self.rows(self.statement(c.label("v")).where(c.is_not(None)).limit(10000)) if r.get("v") is not None]
-            if not vals:
-                continue
-            counts, bin_edges = np.histogram(vals, bins=num_bins)
-            bins_data = []
-            for idx in range(len(counts)):
-                bins_data.append({
-                    "bin_start": round(float(bin_edges[idx]), 2),
-                    "bin_end": round(float(bin_edges[idx + 1]), 2),
-                    "label": f"{round(float(bin_edges[idx]), 1)} - {round(float(bin_edges[idx + 1]), 1)}",
-                    "count": int(counts[idx]),
-                })
-            hists.append({
-                "field": c_info["name"],
-                "bins": bins_data,
-            })
-        return hists
-
-    def scatter_data(self, limit_points=100):
-        num_cols = [c for c in self.columns if c["dtype"] == "numeric"]
-        if len(num_cols) < 2:
-            return None
-        x_col, y_col = num_cols[0], num_cols[1]
-        x_expr, y_expr = self.by_name[x_col["name"]], self.by_name[y_col["name"]]
-        rows = self.rows(
-            self.statement(x_expr.label("x"), y_expr.label("y"))
-            .where(x_expr.is_not(None), y_expr.is_not(None))
-            .limit(limit_points)
-        )
-        return {
-            "x_field": x_col["name"],
-            "y_field": y_col["name"],
-            "points": [{"x": round(float(r["x"]), 2), "y": round(float(r["y"]), 2)} for r in rows if r.get("x") is not None and r.get("y") is not None]
-        }
-
-    def view(self, section, grain=None):
+    def view(self, section):
         capability = self.ds.capabilities.get(section, {"available": True})
         if not capability["available"]:
             return {"dataset_id": self.ds.id, "status": "not_applicable", "reason": capability["reason"],
@@ -339,9 +175,7 @@ class TabularSource:
             cards.extend({"label": name.replace("_", " "), "value": value} for name, value in delivery.items())
         return {"dataset_id": self.ds.id, "dataset_name": self.ds.name, "status": "available", "section": section,
                 "filters": self.f.as_dict(), "kpis": kpis, "metric_cards": cards, "numeric_statistics": numeric,
-                "distributions": distributions, "entities": entities, "time_series": self.time_series(grain=grain),
-                "correlations": self.correlations(), "box_plots": self.box_plots(), "histograms": self.histograms(),
-                "scatter": self.scatter_data(),
+                "distributions": distributions, "entities": entities, "time_series": self.time_series(),
                 "currency_code": self.ds.semantics.get("currency_code"), "capabilities": self.ds.capabilities,
                 "quality": self.ds.quality, "delivery": delivery}
 
@@ -357,6 +191,17 @@ def dataset_metric(function):
                 raise HTTPException(422, "Column filters are not supported by this reference warehouse.")
             return function(db, *args, **kwargs)
         f = args[0] if args and isinstance(args[0], Filters) else kwargs.get("f")
+        if ds.source_type == 'bundle':
+            from app.analytics.bundle import BundleSource
+            source = BundleSource(db,f)
+            name = function.__name__
+            if name == 'kpis': return source.kpis()
+            if name == 'filter_options': return source.filters()
+            if name == 'time_series': return source.time_series(args[1] if len(args)>1 else kwargs.get('grain','month'),kwargs.get('limit',400))
+            if name == 'revenue_by_category': return source.category(kwargs.get('limit',15))
+            if name == 'orders_by_status': return source.statuses()
+            if name in {'overview','sales','orders','customers','products','sellers','delivery'}: return source.view(name)
+            raise HTTPException(422,'This metric is unavailable for the selected bundle. Select a table for generic analysis.')
         source = TabularSource(db, f)
         name = function.__name__
         if name == "kpis":
@@ -372,7 +217,7 @@ def dataset_metric(function):
             col = source.field("status")
             return [{"status": r["label"], "orders": r["rows"]} for r in source.group(col)] if col is not None else []
         if name in {"overview", "sales", "orders", "customers", "products", "sellers", "delivery"}:
-            return source.view("dashboard" if name == "overview" else name, grain=args[1] if len(args) > 1 else kwargs.get("grain"))
+            return source.view("dashboard" if name == "overview" else name)
         # Specialized legacy submetrics cannot read the reference warehouse.
         raise HTTPException(422, f"{name.replace('_', ' ')} requires reference-specific fields.")
     return wrapped

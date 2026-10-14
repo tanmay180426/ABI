@@ -4,6 +4,23 @@ const TOKEN_KEY = 'sem5_token'
 const REFRESH_KEY = 'sem5_refresh'
 const USER_KEY = 'sem5_user'
 let sessionGeneration = 0
+const sessionListeners = new Set<() => void>()
+const notifySession = () => sessionListeners.forEach(listener => listener())
+function storageChanged(event: StorageEvent) {
+  if (event.key === null || [TOKEN_KEY, REFRESH_KEY, USER_KEY].includes(event.key)) {
+    sessionGeneration += 1
+    notifySession()
+  }
+}
+export function subscribeSession(listener: () => void) {
+  if (!sessionListeners.size) window.addEventListener('storage', storageChanged)
+  sessionListeners.add(listener)
+  return () => {
+    sessionListeners.delete(listener)
+    if (!sessionListeners.size) window.removeEventListener('storage', storageChanged)
+  }
+}
+let refreshInFlight: { generation: number; token: string; promise: Promise<string | null> } | null = null
 
 export function getSessionGeneration(): number { return sessionGeneration }
 
@@ -60,7 +77,8 @@ export function isAdminOrAnalyst(): boolean {
 }
 
 export async function login(username: string, password: string): Promise<AuthUser> {
-  const generation = ++sessionGeneration
+  logout()
+  const generation = sessionGeneration
   const body = new URLSearchParams({ username, password })
   const r = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
@@ -73,27 +91,39 @@ export async function login(username: string, password: string): Promise<AuthUse
   localStorage.setItem(TOKEN_KEY, data.access_token)
   localStorage.setItem(REFRESH_KEY, data.refresh_token)
   localStorage.setItem(USER_KEY, JSON.stringify(data.user))
+  notifySession()
   return data.user
 }
 
-export async function refreshAccessToken(): Promise<string | null> {
+export function refreshAccessToken(): Promise<string | null> {
   const generation = sessionGeneration
   const refresh_token = getRefreshToken()
-  if (!refresh_token) return null
-  try {
+  if (!refresh_token) return Promise.resolve(null)
+  if (refreshInFlight?.generation === generation && refreshInFlight.token === refresh_token) return refreshInFlight.promise
+  const promise = (async () => { try {
     const r = await fetch(`${API_BASE}/api/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token }),
     })
-    if (!r.ok) return null
+    if (!r.ok) {
+      if ((r.status === 401 || r.status === 403) && generation === sessionGeneration && refresh_token === getRefreshToken()) logout()
+      return null
+    }
     const data = (await r.json()) as { access_token: string }
     if (generation !== sessionGeneration || refresh_token !== getRefreshToken()) return null
     localStorage.setItem(TOKEN_KEY, data.access_token)
     return data.access_token
   } catch {
     return null
-  }
+  } })()
+  refreshInFlight = { generation, token: refresh_token, promise }
+  void promise.finally(() => { if (refreshInFlight?.promise === promise) refreshInFlight = null })
+  return promise
+}
+
+export function expireSession(generation: number) {
+  if (generation === sessionGeneration) logout()
 }
 
 export function logout() {
@@ -101,4 +131,5 @@ export function logout() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem(USER_KEY)
+  notifySession()
 }

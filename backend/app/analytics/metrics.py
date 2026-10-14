@@ -255,53 +255,15 @@ def time_series(db: Session, f: Filters, grain: str = "month", limit: int = 400)
         )
     }
 
-    raw: dict[str, dict] = {
-        r["period"]: {
+    return [
+        {
             "period": r["period"],
             "orders": int(r["orders"] or 0),
             "customers": int(r["customers"] or 0),
             "revenue": round(float(revenue.get(r["period"], 0.0)), 2),
         }
         for r in orders
-        if r.get("period") is not None
-    }
-
-    # Include any periods present in item revenue but absent from orders
-    for p, rev in revenue.items():
-        if p and p not in raw:
-            raw[p] = {
-                "period": p,
-                "orders": 0,
-                "customers": 0,
-                "revenue": round(float(rev or 0.0), 2),
-            }
-
-    # If daily grain with explicit date bounds, fill in all intermediate calendar days
-    if grain == "day" and f.date_from and f.date_to:
-        from datetime import date, timedelta
-        try:
-            start_d = date.fromisoformat(f.date_from)
-            end_d = date.fromisoformat(f.date_to)
-            if start_d <= end_d and (end_d - start_d).days <= 1000:
-                filled: list[dict] = []
-                cur = start_d
-                while cur <= end_d:
-                    cur_str = cur.isoformat()
-                    if cur_str in raw:
-                        filled.append(raw[cur_str])
-                    else:
-                        filled.append({
-                            "period": cur_str,
-                            "orders": 0,
-                            "customers": 0,
-                            "revenue": 0.0,
-                        })
-                    cur += timedelta(days=1)
-                return filled
-        except Exception:
-            pass
-
-    return sorted(raw.values(), key=lambda x: str(x.get("period", "")))
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -1154,33 +1116,13 @@ def delivery(db: Session, f: Filters) -> dict:
 
 
 @dataset_metric
-def overview(db: Session, f: Filters, grain: Optional[str] = None) -> dict:
+def overview(db: Session, f: Filters) -> dict:
     """Everything the Dashboard needs, in one filtered request."""
-    chosen_grain = grain
-    if not chosen_grain:
-        if f.date_from and f.date_to:
-            from datetime import date
-            try:
-                d_from = date.fromisoformat(f.date_from)
-                d_to = date.fromisoformat(f.date_to)
-                delta_days = (d_to - d_from).days
-                if delta_days <= 31:
-                    chosen_grain = "day"
-                elif delta_days <= 90:
-                    chosen_grain = "week"
-                else:
-                    chosen_grain = "month"
-            except Exception:
-                chosen_grain = "month"
-        else:
-            chosen_grain = "month"
-
     delivery_view = delivery_metrics(db, f)
     return {
         "filters": f.as_dict(),
-        "grain": chosen_grain,
         "kpis": kpis(db, f),
-        "revenue_series": time_series(db, f, chosen_grain),
+        "revenue_series": time_series(db, f, "month"),
         "orders_by_status": orders_by_status(db, f),
         "revenue_by_category": revenue_by_category(db, f),
         "top_customer_states": top_customer_states(db, f),

@@ -1,0 +1,1061 @@
+{
+  "schema_version": 1,
+  "model": "sales_forecast_revenue",
+  "selected_candidate": "Ridge(alpha=10)",
+  "selection_rule": "Eligible candidates must improve pooled expanding-window validation MAE on SeasonalNaive7, remain within 2% of its RMSE, and beat its MAE in at least half of expanding windows; otherwise use SeasonalNaive7. Among eligible candidates within 1% of the lowest validation MAE, select the lowest warm single-row CPU prediction latency measured on the same pre-holdout history; exact latency ties follow candidate declaration order. Final holdout is never used to select or tune.",
+  "validation_fold_stability": {
+    "SeasonalNaive7": {
+      "folds_beating_seasonal_naive_mae": 0,
+      "folds": 3,
+      "fold_mae_mean": 4548.9356,
+      "fold_mae_std": 80.4459
+    },
+    "LinearRegression": {
+      "folds_beating_seasonal_naive_mae": 3,
+      "folds": 3,
+      "fold_mae_mean": 3711.0152,
+      "fold_mae_std": 205.2005
+    },
+    "Ridge(alpha=10)": {
+      "folds_beating_seasonal_naive_mae": 3,
+      "folds": 3,
+      "fold_mae_mean": 3711.0152,
+      "fold_mae_std": 205.2005
+    },
+    "RandomForestRegressor": {
+      "folds_beating_seasonal_naive_mae": 3,
+      "folds": 3,
+      "fold_mae_mean": 3686.4722,
+      "fold_mae_std": 160.5192
+    },
+    "GradientBoostingRegressor": {
+      "folds_beating_seasonal_naive_mae": 3,
+      "folds": 3,
+      "fold_mae_mean": 3731.5711,
+      "fold_mae_std": 159.7098
+    },
+    "HistGradientBoostingRegressor": {
+      "folds_beating_seasonal_naive_mae": 3,
+      "folds": 3,
+      "fold_mae_mean": 3677.666,
+      "fold_mae_std": 188.483
+    }
+  },
+  "selection_metric": "expanding-window validation MAE with seasonal-naive, RMSE, fold-stability, near-tie latency guardrails",
+  "candidate_single_row_predict_latency_ms_local_cpu": {
+    "SeasonalNaive7": 0.0,
+    "LinearRegression": 0.3786,
+    "Ridge(alpha=10)": 0.3727,
+    "RandomForestRegressor": 4.971,
+    "GradientBoostingRegressor": 0.504,
+    "HistGradientBoostingRegressor": 1.8538
+  },
+  "selected_model_single_row_predict_latency_ms_local_cpu": 0.3727,
+  "target_definition": "daily sum of Olist order-item price (BRL, excluding freight/tax/payment totals)",
+  "frequency": "daily",
+  "forecast_strategy": "one-step-ahead expanding-window validation and holdout with observed preceding history; production horizon uses recursive predictions",
+  "features": [
+    "lag1",
+    "lag7",
+    "lag14",
+    "lag30",
+    "roll7",
+    "roll30"
+  ],
+  "preprocessing": {
+    "feature_engineering": "calendar-daily lags 1/7/14/30 and prior-only rolling means 7/30",
+    "missing_values": "none; incomplete feature warm-up rows are excluded before split",
+    "scaling": "none",
+    "target_transform": "none"
+  },
+  "forecast_horizon_days": 1,
+  "production_recursive_max_horizon_days": 90,
+  "candidate_configurations": {
+    "LinearRegression": {
+      "copy_X": true,
+      "fit_intercept": true,
+      "n_jobs": null,
+      "positive": false
+    },
+    "Ridge(alpha=10)": {
+      "alpha": 10.0,
+      "copy_X": true,
+      "fit_intercept": true,
+      "max_iter": null,
+      "positive": false,
+      "random_state": null,
+      "solver": "auto",
+      "tol": 0.0001
+    },
+    "RandomForestRegressor": {
+      "bootstrap": true,
+      "ccp_alpha": 0.0,
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_leaf_nodes": null,
+      "max_samples": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 3,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "monotonic_cst": null,
+      "n_estimators": 200,
+      "n_jobs": 1,
+      "oob_score": false,
+      "random_state": 42,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "GradientBoostingRegressor": {
+      "alpha": 0.9,
+      "ccp_alpha": 0.0,
+      "criterion": "friedman_mse",
+      "init": null,
+      "learning_rate": 0.05,
+      "loss": "squared_error",
+      "max_depth": 2,
+      "max_features": null,
+      "max_leaf_nodes": null,
+      "min_impurity_decrease": 0.0,
+      "min_samples_leaf": 1,
+      "min_samples_split": 2,
+      "min_weight_fraction_leaf": 0.0,
+      "n_estimators": 100,
+      "n_iter_no_change": null,
+      "random_state": 42,
+      "subsample": 1.0,
+      "tol": 0.0001,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    },
+    "HistGradientBoostingRegressor": {
+      "categorical_features": "warn",
+      "early_stopping": "auto",
+      "interaction_cst": null,
+      "l2_regularization": 0.0,
+      "learning_rate": 0.05,
+      "loss": "squared_error",
+      "max_bins": 255,
+      "max_depth": null,
+      "max_features": 1.0,
+      "max_iter": 100,
+      "max_leaf_nodes": 15,
+      "min_samples_leaf": 20,
+      "monotonic_cst": null,
+      "n_iter_no_change": 10,
+      "quantile": null,
+      "random_state": 42,
+      "scoring": "loss",
+      "tol": 1e-07,
+      "validation_fraction": 0.1,
+      "verbose": 0,
+      "warm_start": false
+    }
+  },
+  "split_fractions": {
+    "training_before_validation": 0.6,
+    "validation": 0.2,
+    "holdout": 0.2
+  },
+  "random_seed": 42,
+  "training_period": [
+    "2016-10-04",
+    "2021-07-04"
+  ],
+  "validation_period": [
+    "2021-07-05",
+    "2023-02-03"
+  ],
+  "holdout_period": [
+    "2023-02-04",
+    "2024-09-04"
+  ],
+  "n_training": 1735,
+  "n_validation": 579,
+  "n_holdout": 579,
+  "production_training_period": [
+    "2016-10-04",
+    "2024-09-04"
+  ],
+  "n_production_training": 2893,
+  "validation_metrics": {
+    "SeasonalNaive7": {
+      "mae": 4548.9356,
+      "rmse": 6181.0788,
+      "mape": 29.6574,
+      "mape_excluded_count": 0,
+      "r2": 0.1684,
+      "wape": 25.9068,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "LinearRegression": {
+      "mae": 3711.0152,
+      "rmse": 4838.8739,
+      "mape": 24.011,
+      "mape_excluded_count": 0,
+      "r2": 0.4903,
+      "wape": 21.1348,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "Ridge(alpha=10)": {
+      "mae": 3711.0152,
+      "rmse": 4838.8739,
+      "mape": 24.011,
+      "mape_excluded_count": 0,
+      "r2": 0.4903,
+      "wape": 21.1348,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "RandomForestRegressor": {
+      "mae": 3686.4722,
+      "rmse": 4830.8001,
+      "mape": 23.6794,
+      "mape_excluded_count": 0,
+      "r2": 0.492,
+      "wape": 20.995,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "GradientBoostingRegressor": {
+      "mae": 3731.5711,
+      "rmse": 4864.6501,
+      "mape": 24.2504,
+      "mape_excluded_count": 0,
+      "r2": 0.4849,
+      "wape": 21.2518,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "HistGradientBoostingRegressor": {
+      "mae": 3677.6659,
+      "rmse": 4803.9727,
+      "mape": 23.5937,
+      "mape_excluded_count": 0,
+      "r2": 0.4976,
+      "wape": 20.9448,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    }
+  },
+  "validation_windows": [
+    {
+      "validation_period": [
+        "2021-07-05",
+        "2022-01-13"
+      ],
+      "training_rows": 1735,
+      "metrics": {
+        "SeasonalNaive7": {
+          "mae": 4523.7444,
+          "rmse": 6290.1766,
+          "mape": 33.7725,
+          "mape_excluded_count": 0,
+          "r2": 0.0887,
+          "wape": 29.6684,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "LinearRegression": {
+          "mae": 3580.6219,
+          "rmse": 4812.9029,
+          "mape": 26.4204,
+          "mape_excluded_count": 0,
+          "r2": 0.4665,
+          "wape": 23.483,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "Ridge(alpha=10)": {
+          "mae": 3580.6219,
+          "rmse": 4812.9029,
+          "mape": 26.4204,
+          "mape_excluded_count": 0,
+          "r2": 0.4665,
+          "wape": 23.483,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "RandomForestRegressor": {
+          "mae": 3488.8749,
+          "rmse": 4721.7957,
+          "mape": 25.9039,
+          "mape_excluded_count": 0,
+          "r2": 0.4865,
+          "wape": 22.8813,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "GradientBoostingRegressor": {
+          "mae": 3605.9741,
+          "rmse": 4817.0514,
+          "mape": 27.1845,
+          "mape_excluded_count": 0,
+          "r2": 0.4655,
+          "wape": 23.6493,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "HistGradientBoostingRegressor": {
+          "mae": 3483.3787,
+          "rmse": 4735.9471,
+          "mape": 25.7824,
+          "mape_excluded_count": 0,
+          "r2": 0.4834,
+          "wape": 22.8453,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        }
+      }
+    },
+    {
+      "validation_period": [
+        "2022-01-14",
+        "2022-07-25"
+      ],
+      "training_rows": 1928,
+      "metrics": {
+        "SeasonalNaive7": {
+          "mae": 4465.4511,
+          "rmse": 5871.8519,
+          "mape": 21.5367,
+          "mape_excluded_count": 0,
+          "r2": -0.254,
+          "wape": 21.0684,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "LinearRegression": {
+          "mae": 4000.7315,
+          "rmse": 5106.9629,
+          "mape": 20.0409,
+          "mape_excluded_count": 0,
+          "r2": 0.0514,
+          "wape": 18.8758,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "Ridge(alpha=10)": {
+          "mae": 4000.7315,
+          "rmse": 5106.9629,
+          "mape": 20.0409,
+          "mape_excluded_count": 0,
+          "r2": 0.0514,
+          "wape": 18.8758,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "RandomForestRegressor": {
+          "mae": 3882.0494,
+          "rmse": 4975.7256,
+          "mape": 19.3483,
+          "mape_excluded_count": 0,
+          "r2": 0.0996,
+          "wape": 18.3158,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "GradientBoostingRegressor": {
+          "mae": 3956.9423,
+          "rmse": 5080.5562,
+          "mape": 19.3449,
+          "mape_excluded_count": 0,
+          "r2": 0.0612,
+          "wape": 18.6692,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "HistGradientBoostingRegressor": {
+          "mae": 3932.8543,
+          "rmse": 5016.7105,
+          "mape": 19.7446,
+          "mape_excluded_count": 0,
+          "r2": 0.0847,
+          "wape": 18.5555,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        }
+      }
+    },
+    {
+      "validation_period": [
+        "2022-07-26",
+        "2023-02-03"
+      ],
+      "training_rows": 2121,
+      "metrics": {
+        "SeasonalNaive7": {
+          "mae": 4657.6112,
+          "rmse": 6369.6341,
+          "mape": 33.6629,
+          "mape_excluded_count": 0,
+          "r2": 0.1292,
+          "wape": 28.691,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "LinearRegression": {
+          "mae": 3551.6922,
+          "rmse": 4582.4662,
+          "mape": 25.5718,
+          "mape_excluded_count": 0,
+          "r2": 0.5493,
+          "wape": 21.8785,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "Ridge(alpha=10)": {
+          "mae": 3551.6922,
+          "rmse": 4582.4662,
+          "mape": 25.5718,
+          "mape_excluded_count": 0,
+          "r2": 0.5493,
+          "wape": 21.8785,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "RandomForestRegressor": {
+          "mae": 3688.4924,
+          "rmse": 4791.3137,
+          "mape": 25.786,
+          "mape_excluded_count": 0,
+          "r2": 0.5073,
+          "wape": 22.7212,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "GradientBoostingRegressor": {
+          "mae": 3631.7969,
+          "rmse": 4688.1155,
+          "mape": 26.2218,
+          "mape_excluded_count": 0,
+          "r2": 0.5283,
+          "wape": 22.372,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        },
+        "HistGradientBoostingRegressor": {
+          "mae": 3616.7649,
+          "rmse": 4651.6537,
+          "mape": 25.254,
+          "mape_excluded_count": 0,
+          "r2": 0.5356,
+          "wape": 22.2794,
+          "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+        }
+      }
+    }
+  ],
+  "holdout_metrics": {
+    "SeasonalNaive7": {
+      "mae": 4751.9026,
+      "rmse": 6228.813,
+      "mape": 24.2364,
+      "mape_excluded_count": 0,
+      "r2": 0.2562,
+      "wape": 21.3763,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "LinearRegression": {
+      "mae": 4062.5015,
+      "rmse": 5229.905,
+      "mape": 20.4674,
+      "mape_excluded_count": 0,
+      "r2": 0.4756,
+      "wape": 18.275,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "Ridge(alpha=10)": {
+      "mae": 4062.5015,
+      "rmse": 5229.905,
+      "mape": 20.4674,
+      "mape_excluded_count": 0,
+      "r2": 0.4756,
+      "wape": 18.275,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "RandomForestRegressor": {
+      "mae": 3976.2165,
+      "rmse": 5177.5053,
+      "mape": 20.0174,
+      "mape_excluded_count": 0,
+      "r2": 0.4861,
+      "wape": 17.8869,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "GradientBoostingRegressor": {
+      "mae": 4193.6242,
+      "rmse": 5572.5109,
+      "mape": 21.0658,
+      "mape_excluded_count": 0,
+      "r2": 0.4047,
+      "wape": 18.8649,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    },
+    "HistGradientBoostingRegressor": {
+      "mae": 3936.4473,
+      "rmse": 5188.1573,
+      "mape": 19.5705,
+      "mape_excluded_count": 0,
+      "r2": 0.484,
+      "wape": 17.708,
+      "mape_zero_policy": "Exclude actuals with absolute value <= max(1e-12, 1% of the evaluation-window median absolute actual); report null if none remain."
+    }
+  },
+  "holdout_predictions_file": "sales_forecast_revenue_20261014T180059Z.holdout.csv",
+  "holdout_predictions_sha256": "026ed5ed7cdd6213f347e6f0b9db1f7e7d4586214765cfef9c880b133f702eaf",
+  "data_source": "D:\\College Project\\Trunal_BI_Git\\ml\\data\\processed\\daily_series.csv",
+  "data_sha256": "5bed5f7dbcdf05d9b8f3f7ed97e23268e90c8f3e5363e8872f0fd8174f122def",
+  "data_provenance": {
+    "source": "D:\\College Project\\Trunal_BI_Git\\data\\olist",
+    "generation_summary": {
+      "file": "generation_summary.txt",
+      "sha256": "43e16bc028e58a0b16a9050733fdc72620423e674baba869e4613c875a379227",
+      "text": "Olist 8-year extended raw-style dataset\nTarget: 2016-09-04 through 2024-09-04\nSynthetic extension starts 2018-10-18.\nNo final cleaning/imputation/scaling/encoding/outlier removal performed.\nOriginal Olist fields retained; additional business attributes appended.\n\norders: 359926\nitems: 410566\ncustomers: 313038\nproducts: 32951\nsellers: 3095\npayments: 364371\nreviews: 337907\nmin_date: 2016-09-04 21:15:19\nmax_date: 2024-09-04 23:41:21\norphan_items: 0\norphan_payments: 0\norphan_reviews: 0\norphan_products: 0\norphan_sellers: 0\n"
+    },
+    "source_files": {
+      "olist_customers_dataset.csv": {
+        "rows": 313038,
+        "bytes": 36081333,
+        "sha256": "574ed37269f23731a1232ee2e71b8ad8d6f202fb141bc9a58dcebe4ac2f89bc5",
+        "columns": [
+          "customer_id",
+          "customer_unique_id",
+          "customer_zip_code_prefix",
+          "customer_city",
+          "customer_state",
+          "customer_age",
+          "customer_gender",
+          "customer_income_group",
+          "customer_registration_date"
+        ],
+        "dtypes_first_1000_rows": {
+          "customer_id": "object",
+          "customer_unique_id": "object",
+          "customer_zip_code_prefix": "int64",
+          "customer_city": "object",
+          "customer_state": "object",
+          "customer_age": "int64",
+          "customer_gender": "object",
+          "customer_income_group": "object",
+          "customer_registration_date": "object"
+        },
+        "missing_values_by_column": {
+          "customer_id": 0,
+          "customer_unique_id": 0,
+          "customer_zip_code_prefix": 0,
+          "customer_city": 0,
+          "customer_state": 0,
+          "customer_age": 0,
+          "customer_gender": 0,
+          "customer_income_group": 0,
+          "customer_registration_date": 0
+        },
+        "date_coverage_by_column": {
+          "customer_registration_date": [
+            "2015-01-01T00:00:00",
+            "2023-09-24T00:00:00"
+          ]
+        },
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_daily_business_features.csv": {
+        "rows": 2765,
+        "bytes": 209833,
+        "sha256": "e151a04be275eab2dd3ea9ef7af87c7770e12b63f081443638456d905beee07d",
+        "columns": [
+          "orders",
+          "customers",
+          "revenue",
+          "freight",
+          "profit",
+          "date",
+          "average_order_value",
+          "year",
+          "month",
+          "quarter",
+          "day_of_week",
+          "is_weekend"
+        ],
+        "dtypes_first_1000_rows": {
+          "orders": "int64",
+          "customers": "int64",
+          "revenue": "float64",
+          "freight": "float64",
+          "profit": "float64",
+          "date": "object",
+          "average_order_value": "float64",
+          "year": "int64",
+          "month": "int64",
+          "quarter": "int64",
+          "day_of_week": "int64",
+          "is_weekend": "int64"
+        },
+        "missing_values_by_column": {
+          "orders": 0,
+          "customers": 0,
+          "revenue": 0,
+          "freight": 0,
+          "profit": 0,
+          "date": 0,
+          "average_order_value": 0,
+          "year": 0,
+          "month": 0,
+          "quarter": 0,
+          "day_of_week": 0,
+          "is_weekend": 0
+        },
+        "date_coverage_by_column": {
+          "date": [
+            "2016-09-04T00:00:00",
+            "2024-09-04T00:00:00"
+          ]
+        },
+        "classification": "supplemental generated daily aggregate; audited against source-record targets, not used as a second target series"
+      },
+      "olist_geolocation_dataset.csv": {
+        "rows": 1000163,
+        "bytes": 58657251,
+        "sha256": "7280eaf9b9b5b8c660e077e936ea664a7de76e595b41467d1720a60f0266ffbf",
+        "columns": [
+          "geolocation_zip_code_prefix",
+          "geolocation_lat",
+          "geolocation_lng",
+          "geolocation_city",
+          "geolocation_state"
+        ],
+        "dtypes_first_1000_rows": {
+          "geolocation_zip_code_prefix": "int64",
+          "geolocation_lat": "float64",
+          "geolocation_lng": "float64",
+          "geolocation_city": "object",
+          "geolocation_state": "object"
+        },
+        "missing_values_by_column": {
+          "geolocation_zip_code_prefix": 0,
+          "geolocation_lat": 0,
+          "geolocation_lng": 0,
+          "geolocation_city": 0,
+          "geolocation_state": 0
+        },
+        "date_coverage_by_column": {},
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_order_items_dataset.csv": {
+        "rows": 410566,
+        "bytes": 66003322,
+        "sha256": "13de0f0f8aba9a76bc877ccd98fa72ab1a1db49047581256a230b4407f2a8ac0",
+        "columns": [
+          "order_id",
+          "order_item_id",
+          "product_id",
+          "seller_id",
+          "shipping_limit_date",
+          "price",
+          "freight_value",
+          "discount_percentage",
+          "discount_amount",
+          "product_cost",
+          "item_profit",
+          "promotion_flag",
+          "stock_available_at_order",
+          "stockout_flag"
+        ],
+        "dtypes_first_1000_rows": {
+          "order_id": "object",
+          "order_item_id": "int64",
+          "product_id": "object",
+          "seller_id": "object",
+          "shipping_limit_date": "object",
+          "price": "float64",
+          "freight_value": "float64",
+          "discount_percentage": "float64",
+          "discount_amount": "float64",
+          "product_cost": "float64",
+          "item_profit": "float64",
+          "promotion_flag": "int64",
+          "stock_available_at_order": "int64",
+          "stockout_flag": "int64"
+        },
+        "missing_values_by_column": {
+          "order_id": 0,
+          "order_item_id": 0,
+          "product_id": 0,
+          "seller_id": 0,
+          "shipping_limit_date": 0,
+          "price": 0,
+          "freight_value": 0,
+          "discount_percentage": 0,
+          "discount_amount": 0,
+          "product_cost": 0,
+          "item_profit": 0,
+          "promotion_flag": 0,
+          "stock_available_at_order": 0,
+          "stockout_flag": 0
+        },
+        "date_coverage_by_column": {
+          "shipping_limit_date": [
+            "2016-09-19T00:15:34",
+            "2024-09-07T23:29:34"
+          ]
+        },
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_order_payments_dataset.csv": {
+        "rows": 364371,
+        "bytes": 19801343,
+        "sha256": "5c6a5a388ad1b286f858514f230abaef3053f6f5e0df7370868cb85fba11ae93",
+        "columns": [
+          "order_id",
+          "payment_sequential",
+          "payment_type",
+          "payment_installments",
+          "payment_value"
+        ],
+        "dtypes_first_1000_rows": {
+          "order_id": "object",
+          "payment_sequential": "int64",
+          "payment_type": "object",
+          "payment_installments": "int64",
+          "payment_value": "float64"
+        },
+        "missing_values_by_column": {
+          "order_id": 0,
+          "payment_sequential": 0,
+          "payment_type": 0,
+          "payment_installments": 0,
+          "payment_value": 0
+        },
+        "date_coverage_by_column": {},
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_order_reviews_dataset.csv": {
+        "rows": 337907,
+        "bytes": 40210665,
+        "sha256": "5d5abfa8d3f7d35c0d8d26db0d9c89298fad610d730625a223d550e7ed84b22d",
+        "columns": [
+          "review_id",
+          "order_id",
+          "review_score",
+          "review_comment_title",
+          "review_comment_message",
+          "review_creation_date",
+          "review_answer_timestamp"
+        ],
+        "dtypes_first_1000_rows": {
+          "review_id": "object",
+          "order_id": "object",
+          "review_score": "int64",
+          "review_comment_title": "object",
+          "review_comment_message": "object",
+          "review_creation_date": "object",
+          "review_answer_timestamp": "object"
+        },
+        "missing_values_by_column": {
+          "review_id": 0,
+          "order_id": 0,
+          "review_score": 0,
+          "review_comment_title": 326339,
+          "review_comment_message": 296930,
+          "review_creation_date": 0,
+          "review_answer_timestamp": 0
+        },
+        "date_coverage_by_column": {
+          "review_creation_date": [
+            "2016-10-02T00:00:00",
+            "2024-10-24T02:52:35"
+          ],
+          "review_answer_timestamp": [
+            "2016-10-07T18:32:28",
+            "2024-10-24T11:52:35"
+          ]
+        },
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_orders_dataset.csv": {
+        "rows": 359926,
+        "bytes": 80147377,
+        "sha256": "6cdbd111d895b4988bb54a0495a0a8085da4af9bca0cb02b1df7f47cfb069359",
+        "columns": [
+          "order_id",
+          "customer_id",
+          "order_status",
+          "order_purchase_timestamp",
+          "order_approved_at",
+          "order_delivered_carrier_date",
+          "order_delivered_customer_date",
+          "order_estimated_delivery_date",
+          "campaign_id",
+          "campaign_type",
+          "marketing_spend",
+          "holiday_flag",
+          "season",
+          "promotion_flag"
+        ],
+        "dtypes_first_1000_rows": {
+          "order_id": "object",
+          "customer_id": "object",
+          "order_status": "object",
+          "order_purchase_timestamp": "object",
+          "order_approved_at": "object",
+          "order_delivered_carrier_date": "object",
+          "order_delivered_customer_date": "object",
+          "order_estimated_delivery_date": "object",
+          "campaign_id": "object",
+          "campaign_type": "object",
+          "marketing_spend": "float64",
+          "holiday_flag": "int64",
+          "season": "object",
+          "promotion_flag": "int64"
+        },
+        "missing_values_by_column": {
+          "order_id": 0,
+          "customer_id": 0,
+          "order_status": 0,
+          "order_purchase_timestamp": 0,
+          "order_approved_at": 160,
+          "order_delivered_carrier_date": 3100,
+          "order_delivered_customer_date": 9512,
+          "order_estimated_delivery_date": 0,
+          "campaign_id": 0,
+          "campaign_type": 0,
+          "marketing_spend": 0,
+          "holiday_flag": 0,
+          "season": 0,
+          "promotion_flag": 0
+        },
+        "date_coverage_by_column": {
+          "order_purchase_timestamp": [
+            "2016-09-04T21:15:19",
+            "2024-09-04T23:41:21"
+          ],
+          "order_delivered_carrier_date": [
+            "2016-10-08T10:34:01",
+            "2024-09-08T07:43:53"
+          ],
+          "order_delivered_customer_date": [
+            "2016-10-11T13:46:32",
+            "2024-10-10T03:10:51"
+          ],
+          "order_estimated_delivery_date": [
+            "2016-09-30T00:00:00",
+            "2024-10-02T06:06:32"
+          ]
+        },
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_products_dataset.csv": {
+        "rows": 32951,
+        "bytes": 3705812,
+        "sha256": "2242a664a88f1499c218f75e4bb09ac3f6b30ae0145f2513dbd2cda82c0f74cf",
+        "columns": [
+          "product_id",
+          "product_category_name",
+          "product_name_lenght",
+          "product_description_lenght",
+          "product_photos_qty",
+          "product_weight_g",
+          "product_length_cm",
+          "product_height_cm",
+          "product_width_cm",
+          "product_cost",
+          "brand",
+          "reorder_level",
+          "stock_available"
+        ],
+        "dtypes_first_1000_rows": {
+          "product_id": "object",
+          "product_category_name": "object",
+          "product_name_lenght": "float64",
+          "product_description_lenght": "float64",
+          "product_photos_qty": "float64",
+          "product_weight_g": "float64",
+          "product_length_cm": "float64",
+          "product_height_cm": "float64",
+          "product_width_cm": "float64",
+          "product_cost": "float64",
+          "brand": "object",
+          "reorder_level": "int64",
+          "stock_available": "int64"
+        },
+        "missing_values_by_column": {
+          "product_id": 0,
+          "product_category_name": 610,
+          "product_name_lenght": 610,
+          "product_description_lenght": 610,
+          "product_photos_qty": 610,
+          "product_weight_g": 2,
+          "product_length_cm": 2,
+          "product_height_cm": 2,
+          "product_width_cm": 2,
+          "product_cost": 0,
+          "brand": 0,
+          "reorder_level": 0,
+          "stock_available": 0
+        },
+        "date_coverage_by_column": {},
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "olist_sellers_dataset.csv": {
+        "rows": 3095,
+        "bytes": 222410,
+        "sha256": "11a5ce2f1a5047a36f66f955f336be281fa9bdbe00cce8fc5b7fb5db28e8d016",
+        "columns": [
+          "seller_id",
+          "seller_zip_code_prefix",
+          "seller_city",
+          "seller_state",
+          "seller_rating",
+          "seller_join_date",
+          "seller_capacity_orders_daily"
+        ],
+        "dtypes_first_1000_rows": {
+          "seller_id": "object",
+          "seller_zip_code_prefix": "int64",
+          "seller_city": "object",
+          "seller_state": "object",
+          "seller_rating": "float64",
+          "seller_join_date": "object",
+          "seller_capacity_orders_daily": "int64"
+        },
+        "missing_values_by_column": {
+          "seller_id": 0,
+          "seller_zip_code_prefix": 0,
+          "seller_city": 0,
+          "seller_state": 0,
+          "seller_rating": 0,
+          "seller_join_date": 0,
+          "seller_capacity_orders_daily": 0
+        },
+        "date_coverage_by_column": {
+          "seller_join_date": [
+            "2015-01-01T00:00:00",
+            "2018-07-23T00:00:00"
+          ]
+        },
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      },
+      "product_category_name_translation.csv": {
+        "rows": 71,
+        "bytes": 2540,
+        "sha256": "5233473346639d5ff3da9b784385ba284778abfaac1062572abe99e8aba8b7e3",
+        "columns": [
+          "product_category_name",
+          "product_category_name_english"
+        ],
+        "dtypes_first_1000_rows": {
+          "product_category_name": "object",
+          "product_category_name_english": "object"
+        },
+        "missing_values_by_column": {
+          "product_category_name": 0,
+          "product_category_name_english": 0
+        },
+        "date_coverage_by_column": {},
+        "classification": "source-style table; synthetic rows may be present after declared cutoff"
+      }
+    },
+    "supplemental_daily_business_features_audit": {
+      "file": "olist_daily_business_features.csv",
+      "rows": 2765,
+      "invalid_dates": 0,
+      "duplicate_dates": 0,
+      "date_start": "2016-09-04",
+      "date_end": "2024-09-04",
+      "source_series_rows": 2923,
+      "overlap_dates": 2765,
+      "source_dates_absent_from_feature_table": 158,
+      "source_active_dates_absent_from_feature_table": 18,
+      "source_orders_on_dates_absent_from_feature_table": 23,
+      "feature_only_dates": 0,
+      "source_orders_total": 359926,
+      "feature_orders_total": 359903,
+      "overlap_dates_with_equal_order_count": 2765,
+      "overlap_dates_with_different_order_count": 0,
+      "source_item_price_revenue_total": 51848684.52,
+      "feature_revenue_total": 50762688.18,
+      "overlap_dates_with_equal_revenue": 9,
+      "overlap_dates_with_different_revenue": 2756,
+      "target_use": "Inventory and reconcile only. The canonical forecasting targets are rebuilt from source orders and order-item prices; this generated daily summary is sparse and does not reconcile exactly, so substituting or summing it would omit activity or double-count records."
+    },
+    "generated_at": "2026-10-14T17:57:06.753603+00:00",
+    "provenance_window": {
+      "documented_original_window_end_inclusive": "2018-10-17",
+      "synthetic_extension_start": "2018-10-18",
+      "orders_extended_window": 260485,
+      "all_valid_timestamp_orders_in_unified_series": 359926,
+      "synthetic_rows_included_in_unified_training_and_evaluation": 260485,
+      "note": "The generation summary identifies post-cutoff observations as synthetic/generated. They are retained in the unified primary series as requested; mixed-data scores do not establish real-world accuracy."
+    },
+    "daily_series": {
+      "rows": 2923,
+      "date_start": "2016-09-04",
+      "date_end": "2024-09-04",
+      "duplicate_dates": 0,
+      "missing_calendar_days_filled_as_zero": 140,
+      "orders_total": 359926,
+      "item_price_revenue_total": 51848684.52
+    },
+    "orders": {
+      "missing_values_by_column": {
+        "order_id": 0,
+        "customer_id": 0,
+        "order_status": 0,
+        "order_purchase_timestamp": 0,
+        "order_approved_at": 160,
+        "order_delivered_carrier_date": 3100,
+        "order_delivered_customer_date": 9512,
+        "order_estimated_delivery_date": 0,
+        "campaign_id": 0,
+        "campaign_type": 0,
+        "marketing_spend": 0,
+        "holiday_flag": 0,
+        "season": 0,
+        "promotion_flag": 0
+      },
+      "exact_duplicate_rows": 0,
+      "duplicate_order_ids": 0,
+      "missing_order_ids": 0,
+      "invalid_purchase_timestamps_excluded": 0,
+      "valid_purchase_date_start": "2016-09-04",
+      "valid_purchase_date_end": "2024-09-04"
+    },
+    "order_items": {
+      "missing_values_by_column": {
+        "order_id": 0,
+        "order_item_id": 0,
+        "product_id": 0,
+        "seller_id": 0,
+        "shipping_limit_date": 0,
+        "price": 0,
+        "freight_value": 0,
+        "discount_percentage": 0,
+        "discount_amount": 0,
+        "product_cost": 0,
+        "item_profit": 0,
+        "promotion_flag": 0,
+        "stock_available_at_order": 0,
+        "stockout_flag": 0
+      },
+      "exact_duplicate_rows": 0,
+      "duplicate_order_item_pairs": 0,
+      "missing_prices": 0,
+      "negative_prices": 0,
+      "nonfinite_prices": 0,
+      "price_iqr_outlier_count": 30788,
+      "price_summary": {
+        "min": 0.85,
+        "median": 78.0,
+        "max": 7852.26
+      }
+    },
+    "unified_daily_series": {
+      "rows": 2923,
+      "date_start": "2016-09-04",
+      "date_end": "2024-09-04",
+      "source_order_rows_included": 359926,
+      "source_order_rows_excluded_invalid_timestamp": 0,
+      "missing_calendar_days_filled_as_zero": 140
+    },
+    "target_definition": "unified daily count of unique orders; unified daily sum of order-item price (Olist price, BRL), excluding freight, tax, payment totals, and profit. Documented synthetic extension is included in the primary series.",
+    "limitations": [
+      "Olist is a historical Brazilian ecommerce sample and does not establish present-day business patterns.",
+      "Invalid purchase timestamps are excluded from daily aggregation.",
+      "Missing calendar dates inside the valid source period are interpreted as zero orders.",
+      "Revenue uses item price only; it is not payment value, freight-inclusive sales, or profit.",
+      "The supplied generation summary labels records from the declared extension cutoff as synthetic/generated. Those observations are included in the unified dataset and all forecast partitions; this mixed provenance limits claims of real-world generalization."
+    ]
+  },
+  "versions": {
+    "python": "3.13.5",
+    "pandas": "2.2.3",
+    "numpy": "2.1.3",
+    "scikit_learn": "1.5.2",
+    "joblib": "1.4.2"
+  },
+  "evaluated_at": "2026-10-14T18:00:59.603501+00:00",
+  "training_run_id": "20261014T180059Z",
+  "artifact": "sales_forecast_revenue_20261014T180059Z.joblib",
+  "artifact_sha256": "e897a8dab2749b789b6bc973da75e9e4c561600baf5744ff99e544cc665245d1"
+}

@@ -17,7 +17,7 @@ import { useFilters } from '@/hooks/useFilters'
 import { KpiCard } from '@/components/KpiCard'
 import { fmtMoney } from '@/services/format'
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316']
+const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)', 'var(--chart-7)']
 
 export default function Orders() {
   const { filters } = useFilters()
@@ -72,16 +72,16 @@ export default function Orders() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Orders Over Time</h2>
           {orders_series && orders_series.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={orders_series}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                <XAxis dataKey="period" stroke="#666" fontSize={11} />
-                <YAxis stroke="#666" fontSize={11} />
-                <Tooltip contentStyle={{ background: '#171717', border: '1px solid #333' }} />
-                <Line type="monotone" dataKey="orders" stroke="#22c55e" strokeWidth={2} dot={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                <XAxis dataKey="period" stroke="rgb(var(--muted))" fontSize={11} />
+                <YAxis stroke="rgb(var(--muted))" fontSize={11} />
+                <Tooltip contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }} />
+                <Line type="monotone" dataKey="orders" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -89,7 +89,7 @@ export default function Orders() {
           )}
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Order Status Distribution</h2>
           <div className="flex h-[300px]">
             {by_status && by_status.length > 0 ? (
@@ -109,7 +109,7 @@ export default function Orders() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ background: '#171717', border: '1px solid #333' }} />
+                  <Tooltip contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -129,7 +129,7 @@ export default function Orders() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Payment Types</h2>
           <div className="space-y-3">
             {payment_types?.map((pt: any) => (
@@ -142,7 +142,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Payment Installments</h2>
           <div className="space-y-3">
             {payment_installments?.map((pi: any) => (
@@ -155,7 +155,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Items per Order</h2>
           <div className="space-y-3">
             {items_per_order?.map((io: any) => (
@@ -168,7 +168,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Order Value</h2>
           <div className="space-y-3">
             {order_value_distribution?.map((ov: any) => (

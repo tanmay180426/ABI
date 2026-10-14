@@ -33,6 +33,13 @@ corrections, isolation, model requirements and supported structures, and
 - AI: provider-agnostic LLM (Ollama preferred) with deterministic fallback
 
 ## Setup (local)
+For the current Windows workflow, read [LOCAL_SETUP_WINDOWS.md](docs/LOCAL_SETUP_WINDOWS.md).
+This integration branch is a development checkpoint before the planned UI
+redesign, not a production release. Trained serving binaries are separate local
+prerequisites, not tracked assets. Fresh uploaded analytics works without them
+or Ollama. Prior verification used sanitized working-tree snapshots; it does
+not establish a GitHub clean-clone test of this checkpoint.
+
 1. For the optional reference warehouse, place Olist at `%USERPROFILE%\Downloads\olist`.
 2. Copy `.env.example` to `.env` (optional; sensible dev defaults exist).
 3. Frontend: `cd frontend && npm install`
@@ -46,10 +53,10 @@ corrections, isolation, model requirements and supported structures, and
 
 ## Testing
 ```powershell
-cd backend; python -m pytest -q          # 99 API/integration tests with loaded reference
-cd ml;      python -m pytest -q          # 8 pipeline tests
-cd frontend; npm test                    # 28 component/API tests (Vitest)
-cd frontend; npm run e2e                 # 6 real browser E2E (Playwright)
+cd backend; python -m pytest -q          # Isolated API/integration tests; optional reference fixtures
+cd ml;      python -m pytest -q          # ML pipeline tests
+cd frontend; npm test                    # Component/API tests (Vitest)
+cd frontend; npm run e2e                 # Real browser workflows (Playwright)
 cd frontend; npm run lint; npm run build
 ```
 
@@ -69,6 +76,9 @@ API_DOCUMENTATION, RBAC, TESTING, POSTGRES, SETUP, PROJECT_PLAN, DECISIONS,
 STATUS, CHECKLIST).
 
 ## Notes
+- Folder/ZIP bundles accept a 200 MiB payload and separate bounded processing
+  budgets. Recognized Olist bundles support an order-grain Dashboard; see
+  `docs/UNIVERSAL_DATASETS.md`.
 - ML and website were developed in parallel and integrated via documented interfaces.
 - AI assistant uses authorized backend data only (no arbitrary SQL).
 - `AUTH_REQUIRED` and `VITE_AUTH_REQUIRED` default to `true` (login required).

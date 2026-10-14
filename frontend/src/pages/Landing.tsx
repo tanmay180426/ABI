@@ -1,58 +1,28 @@
 import { Link } from 'react-router-dom'
+import { Brand } from '@/components/ui/Workspace'
+import { Icon } from '@/components/ui/Icon'
 
 const features = [
-  {
-    title: 'Data warehouse',
-    body: 'Upload structured datasets and explore verified metrics. The existing Olist reference warehouse is available alongside your datasets.',
-  },
-  {
-    title: 'ML models',
-    body: 'Sales forecasting, sales prediction, customer and product segmentation, and anomaly detection.',
-  },
-  {
-    title: 'AI assistant',
-    body: 'Natural-language insights over your own data, served by a local LLM through Ollama.',
-  },
+  { icon: 'data', title: 'A home for your data', body: 'Upload structured files or CSV bundles. Inspect schemas, confirm mappings, and keep every table in its own private dataset context.' },
+  { icon: 'chart', title: 'Evidence in every view', body: 'Explore observed metrics, shared filters, and data quality. Export the same scoped results you see in your workspace.' },
+  { icon: 'model', title: 'Intelligence with context', body: 'Use computed numerical Insights and compatible saved ML models. Optional local language generation adds explanations when available.' },
 ]
 
 export default function Landing() {
-  return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <div className="max-w-4xl mx-auto px-6 py-20">
-        <header className="text-center">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            AI-Powered Business Intelligence &amp; Predictive Analytics Platform
-          </h1>
-          <p className="text-neutral-400 mt-4">
-            Semester 5 project integrating AI, Data Warehousing &amp; Mining, and Software Engineering.
-            Analyze your uploaded datasets or explore the Olist reference.
-          </p>
-          <Link
-            to="/login"
-            className="inline-block mt-8 px-6 py-3 rounded bg-blue-600 hover:bg-blue-500 text-sm font-medium"
-          >
-            Sign in to open the dashboard
-          </Link>
-          <p className="text-xs text-neutral-500 mt-4">
-            Local development accounts: <span className="text-neutral-400">admin / admin123</span> (business
-            intelligence + platform administration) ·{' '}
-            <span className="text-neutral-400">analyst / analyst123</span> (business intelligence)
-          </p>
-        </header>
-
-        <section className="grid gap-4 md:grid-cols-3 mt-16">
-          {features.map((f) => (
-            <div key={f.title} className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-5">
-              <h2 className="font-semibold">{f.title}</h2>
-              <p className="text-sm text-neutral-400 mt-2">{f.body}</p>
-            </div>
-          ))}
-        </section>
-
-        <p className="text-center text-xs text-neutral-500 mt-16">
-          Analytics, reports and AI insights follow your active dataset. Existing trained ML models run when their input requirements are satisfied.
-        </p>
-      </div>
-    </div>
-  )
+  return <div className="abi-landing">
+    <nav className="abi-landing-nav" aria-label="Public navigation"><Brand /><Link className="abi-button" to="/login">Open workspace <Icon name="arrow" size={15} /></Link></nav>
+    <main>
+      <section className="abi-landing-hero">
+        <div><div className="abi-eyebrow">Autonomous Business Intelligence / ABI</div><h1>AI-Powered Business Intelligence.<br /><span>Built around your data.</span></h1><p>One connected workspace for analytics, predictive models, and clear decisions. Bring your own datasets. Keep the evidence in view.</p><Link className="abi-button abi-button-primary mt-8" to="/login">Sign in to open the dashboard <Icon name="arrow" size={15} /></Link><div className="mt-6 abi-eyebrow">Local computation. Private datasets. No required paid API.</div></div>
+        <div className="abi-landing-flow" aria-label="Platform workflow">
+          <p className="abi-eyebrow mb-5">From source to understanding</p>
+          <div className="abi-flow-node"><Icon name="data" /><div><strong>Your datasets</strong><small>Files, folders &amp; CSV bundles</small></div></div><div className="abi-flow-line" />
+          <div className="abi-flow-node"><Icon name="filter" /><div><strong>A shared context</strong><small>Validated fields, relationships &amp; filters</small></div></div><div className="abi-flow-line" />
+          <div className="abi-flow-node" style={{ borderColor: 'rgb(var(--primary) / .4)' }}><Icon name="chart" /><div><strong>Decisions grounded in evidence</strong><small>Analytics, reports &amp; compatible models</small></div></div>
+        </div>
+      </section>
+      <section className="abi-landing-features" aria-label="Platform capabilities">{features.map((feature, index) => <article key={feature.title}><span className="abi-eyebrow">0{index + 1} / <Icon name={feature.icon} style={{ display: 'inline', marginLeft: 8 }} /></span><h2>{feature.title}</h2><p>{feature.body}</p></article>)}</section>
+    </main>
+    <footer className="abi-landing-footer"><span>ABI / AUTONOMOUS BUSINESS INTELLIGENCE</span><span>Trained inference requires compatible, separately installed artifacts.</span></footer>
+  </div>
 }

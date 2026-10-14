@@ -16,7 +16,7 @@ export default function AdminData() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-medium">Data pipeline / ETL</h2>
           <span className={`text-xs uppercase ${etl.loaded ? 'text-emerald-400' : 'text-amber-400'}`}>
@@ -42,7 +42,7 @@ export default function AdminData() {
         <div className="text-xs text-neutral-500 mt-3">Reference warehouse source: {etl.olist_dir}</div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
         Status only — re-running the pipeline is an offline operation:{' '}
         <code className="text-neutral-300">python -m app.services.etl</code>
       </div>

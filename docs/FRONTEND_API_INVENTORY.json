@@ -1,0 +1,777 @@
+{
+  "counting": "Exported API operation definitions containing a concrete route expression, including unused compatibility wrappers; helpers/local session functions excluded.",
+  "total": 41,
+  "operations": [
+    {
+      "name": "listDatasets",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/datasets",
+      "signature": "export function listDatasets() ",
+      "implementation": "export function listDatasets() { return getJson<{ datasets: Dataset[]; active_dataset_id: string | null }>('/api/datasets') }",
+      "consumers": [
+        {
+          "file": "frontend/src/components/layout/AppLayout.tsx",
+          "lines": [
+            19
+          ]
+        }
+      ]
+    },
+    {
+      "name": "selectDataset",
+      "file": "frontend/src/services/api.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/datasets/${id}/select",
+      "signature": "export function selectDataset(id: string) ",
+      "implementation": "export function selectDataset(id: string) { return request<Dataset>(`/api/datasets/${id}/select`, { method: 'POST' }) }",
+      "consumers": [
+        {
+          "file": "frontend/src/components/layout/AppLayout.tsx",
+          "lines": [
+            33
+          ]
+        }
+      ]
+    },
+    {
+      "name": "deleteDataset",
+      "file": "frontend/src/services/api.ts",
+      "method": "DELETE",
+      "endpoint_expression": "/api/datasets/${id}",
+      "signature": "export function deleteDataset(id: string) ",
+      "implementation": "export function deleteDataset(id: string) { return request<void>(`/api/datasets/${id}`, { method: 'DELETE' }) }",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Datasets.tsx",
+          "lines": [
+            72
+          ]
+        }
+      ]
+    },
+    {
+      "name": "uploadDataset",
+      "file": "frontend/src/services/api.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/datasets/upload",
+      "signature": "export function uploadDataset(file: File, name: string) ",
+      "implementation": "export function uploadDataset(file: File, name: string) {\n  const form = new FormData(); form.append('file', file); form.append('name', name)\n  return request<Dataset>('/api/datasets/upload', { method: 'POST', body: form })\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Datasets.tsx",
+          "lines": [
+            65
+          ]
+        }
+      ]
+    },
+    {
+      "name": "updateDatasetSchema",
+      "file": "frontend/src/services/api.ts",
+      "method": "PATCH",
+      "endpoint_expression": "/api/datasets/${id}/schema",
+      "signature": "export function updateDatasetSchema(id: string, schema: { fields: Record<string, string | null>; currency_code: string | null; domain: string; date_order?: string }) ",
+      "implementation": "export function updateDatasetSchema(id: string, schema: { fields: Record<string, string | null>; currency_code: string | null; domain: string; date_order?: string }) {\n  return request<Dataset>(`/api/datasets/${id}/schema`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(schema) })\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Datasets.tsx",
+          "lines": [
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "name": "health",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/health",
+      "signature": "export function health() ",
+      "implementation": "export function health() {\r\n  return getJson<{ status: string }>('/health')\r\n}",
+      "consumers": []
+    },
+    {
+      "name": "getKpis",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/dashboard/kpis${qs",
+      "signature": "export function getKpis(params: Record<string, string> = {}) ",
+      "implementation": "export function getKpis(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<Kpis>(`/api/dashboard/kpis${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": []
+    },
+    {
+      "name": "getMonthlyRevenue",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/dashboard/monthly-revenue",
+      "signature": "export function getMonthlyRevenue() ",
+      "implementation": "export function getMonthlyRevenue() {\r\n  return getJson<{ series: MonthlyPoint[] }>('/api/dashboard/monthly-revenue')\r\n}",
+      "consumers": []
+    },
+    {
+      "name": "getRevenueByCategory",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/dashboard/revenue-by-category",
+      "signature": "export function getRevenueByCategory() ",
+      "implementation": "export function getRevenueByCategory() {\r\n  return getJson<{ series: CategoryPoint[] }>('/api/dashboard/revenue-by-category')\r\n}",
+      "consumers": []
+    },
+    {
+      "name": "getOrdersByStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/dashboard/orders-by-status",
+      "signature": "export function getOrdersByStatus() ",
+      "implementation": "export function getOrdersByStatus() {\r\n  return getJson<{ series: StatusPoint[] }>('/api/dashboard/orders-by-status')\r\n}",
+      "consumers": []
+    },
+    {
+      "name": "getFilterOptions",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/filters",
+      "signature": "export function getFilterOptions() ",
+      "implementation": "export function getFilterOptions() {\r\n  return getJson<FilterOptions>('/api/analytics/filters')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/components/FilterBar.tsx",
+          "lines": [
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsOverview",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/overview${qs",
+      "signature": "export function getAnalyticsOverview(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsOverview(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/overview${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Dashboard.tsx",
+          "lines": [
+            35
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsSales",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/sales${qs",
+      "signature": "export function getAnalyticsSales(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsSales(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/sales${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/analytics/Sales.tsx",
+          "lines": [
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsOrders",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/orders${qs",
+      "signature": "export function getAnalyticsOrders(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsOrders(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/orders${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/analytics/Orders.tsx",
+          "lines": [
+            31
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsCustomers",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/customers${qs",
+      "signature": "export function getAnalyticsCustomers(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsCustomers(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/customers${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/analytics/Customers.tsx",
+          "lines": [
+            31
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsProducts",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/products${qs",
+      "signature": "export function getAnalyticsProducts(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsProducts(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/products${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/analytics/Products.tsx",
+          "lines": [
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsSellers",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/sellers${qs",
+      "signature": "export function getAnalyticsSellers(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsSellers(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/sellers${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/analytics/Sellers.tsx",
+          "lines": [
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnalyticsDelivery",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/analytics/delivery${qs",
+      "signature": "export function getAnalyticsDelivery(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnalyticsDelivery(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(params).toString()\r\n  return getJson<any>(`/api/analytics/delivery${qs ? `?${qs}` : ''}`)\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/analytics/Delivery.tsx",
+          "lines": [
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getMlStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/ml/status?${new",
+      "signature": "export function getMlStatus(params: Record<string, string> = {}) ",
+      "implementation": "export function getMlStatus(params: Record<string, string> = {}) {\n  return getJson<{ features: MlFeature[] }>(`/api/ml/status?${new URLSearchParams(modelParams(params))}`)\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/ml/MlMetrics.tsx",
+          "lines": [
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getForecast",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/ml/forecast?${new",
+      "signature": "export function getForecast(periods = 30, target: 'orders' | 'revenue' = 'orders', params: Record<string, string> = {}) ",
+      "implementation": "export function getForecast(periods = 30, target: 'orders' | 'revenue' = 'orders', params: Record<string, string> = {}) {\n  return getJson<{ history_tail: ForecastPoint[]; forecast: ForecastPoint[]; status?: string; reason?: string }>(\n    `/api/ml/forecast?${new URLSearchParams({ ...modelParams(params), periods: String(periods), target })}`,\n  )\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/ml/RevenueForecast.tsx",
+          "lines": [
+            34
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getCustomerSegments",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/ml/segments/customers?${new",
+      "signature": "export function getCustomerSegments(params: Record<string, string> = {}) ",
+      "implementation": "export function getCustomerSegments(params: Record<string, string> = {}) {\n  return getJson<CustomerSegmentsResponse>(`/api/ml/segments/customers?${new URLSearchParams(modelParams(params))}`)\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/ml/MlAnalysis.tsx",
+          "lines": [
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAnomalies",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/ml/anomalies?${new",
+      "signature": "export function getAnomalies(params: Record<string, string> = {}) ",
+      "implementation": "export function getAnomalies(params: Record<string, string> = {}) {\n  return getJson<AnomaliesResponse>(`/api/ml/anomalies?${new URLSearchParams(modelParams(params))}`)\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/ml/MlAnalysis.tsx",
+          "lines": [
+            39
+          ]
+        }
+      ]
+    },
+    {
+      "name": "predictSales",
+      "file": "frontend/src/services/api.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/ml/predict/sales?${new",
+      "signature": "export function predictSales(input: SalesPredictInput, params: Record<string, string> = {}) ",
+      "implementation": "export function predictSales(input: SalesPredictInput, params: Record<string, string> = {}) {\n  return postJson<SalesPredictionResponse>(\n    `/api/ml/predict/sales?${new URLSearchParams(modelParams(params))}`,\n    input,\r\n  )\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/ml/MlAnalysis.tsx",
+          "lines": [
+            68
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getProductSegments",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/ml/product-segmentation${qs",
+      "signature": "export function getProductSegments(params: Record<string, string> = {}) ",
+      "implementation": "export function getProductSegments(params: Record<string, string> = {}) {\r\n  const qs = new URLSearchParams(modelParams(params)).toString()\n  return getJson<ProductSegmentationResponse>(\r\n    `/api/ml/product-segmentation${qs ? `?${qs}` : ''}`\r\n  )\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/ml/ProductSegmentation.tsx",
+          "lines": [
+            31
+          ]
+        }
+      ]
+    },
+    {
+      "name": "queryInsights",
+      "file": "frontend/src/services/api.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/insights/query?${new",
+      "signature": "export function queryInsights(question: string, context_limit = 20, params: Record<string, string> = {}) ",
+      "implementation": "export function queryInsights(question: string, context_limit = 20, params: Record<string, string> = {}) {\n  return postJson<InsightsResponse>(`/api/insights/query?${new URLSearchParams(params)}`, { question, context_limit })\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Insights.tsx",
+          "lines": [
+            40
+          ]
+        }
+      ]
+    },
+    {
+      "name": "downloadReport",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/reports/export?${qs}",
+      "signature": "export async function downloadReport(report: string, params: Record<string, string> = {}) ",
+      "implementation": "export async function downloadReport(report: string, params: Record<string, string> = {}) {\n  const context = getRequestContext()\n  const qs = new URLSearchParams({ ...params, report }).toString()\n  const r = await requestResponse(`/api/reports/export?${qs}`, {}, true, context)\n  const blob = await r.blob()\n  ensureContext(context, 'Dataset or session changed; export discarded.')\n  const url = URL.createObjectURL(blob)\r\n  const a = document.createElement('a')\r\n  a.href = url\n  a.download = `${report}.csv`\n  document.body.appendChild(a)\n  a.click()\n  a.remove()\n  // Keep the blob alive until the browser has started consuming the download.\n  window.setTimeout(() => URL.revokeObjectURL(url), 1000)\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Reports.tsx",
+          "lines": [
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getSystemStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/admin/system/status",
+      "signature": "export function getSystemStatus() ",
+      "implementation": "export function getSystemStatus() {\r\n  return getJson<SystemStatus>('/api/admin/system/status')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminHealth.tsx",
+          "lines": [
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getAdminHealth",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/admin/health",
+      "signature": "export function getAdminHealth() ",
+      "implementation": "export function getAdminHealth() {\r\n  return getJson<AdminHealthStatus>('/api/admin/health')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminHealth.tsx",
+          "lines": [
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getEtlStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/admin/data/etl/status",
+      "signature": "export function getEtlStatus() ",
+      "implementation": "export function getEtlStatus() {\r\n  return getJson<EtlStatus>('/api/admin/data/etl/status')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminData.tsx",
+          "lines": [
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getMe",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/users/me",
+      "signature": "export function getMe() ",
+      "implementation": "export function getMe() {\r\n  return getJson<{ user: PublicUser }>('/api/users/me')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/components/RequireAdmin.tsx",
+          "lines": [
+            37
+          ]
+        }
+      ]
+    },
+    {
+      "name": "listUsers",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/users",
+      "signature": "export function listUsers() ",
+      "implementation": "export function listUsers() {\r\n  return getJson<{ users: PublicUser[] }>('/api/users')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminUsers.tsx",
+          "lines": [
+            24
+          ]
+        }
+      ]
+    },
+    {
+      "name": "createUser",
+      "file": "frontend/src/services/api.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/auth/register",
+      "signature": "export function createUser(username: string, password: string, role: Role) ",
+      "implementation": "export function createUser(username: string, password: string, role: Role) {\r\n  return postJson<{ user: PublicUser }>('/api/auth/register', { username, password, role })\r\n}",
+      "consumers": []
+    },
+    {
+      "name": "updateUserRole",
+      "file": "frontend/src/services/api.ts",
+      "method": "PATCH",
+      "endpoint_expression": "/api/users/${encodeURIComponent",
+      "signature": "export function updateUserRole(username: string, role: Role) ",
+      "implementation": "export function updateUserRole(username: string, role: Role) {\r\n  return request<{ user: PublicUser }>(`/api/users/${encodeURIComponent(username)}/role`, {\r\n    method: 'PATCH',\r\n    headers: { 'Content-Type': 'application/json' },\r\n    body: JSON.stringify({ role }),\r\n  })\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminUsers.tsx",
+          "lines": [
+            43
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getRoleMetadata",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/users/roles/metadata",
+      "signature": "export function getRoleMetadata() ",
+      "implementation": "export function getRoleMetadata() {\r\n  return getJson<{ roles: RoleMetadata[] }>('/api/users/roles/metadata')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminRoles.tsx",
+          "lines": [
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "name": "updateUserStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "PATCH",
+      "endpoint_expression": "/api/users/${encodeURIComponent",
+      "signature": "export function updateUserStatus(username: string, is_active: boolean) ",
+      "implementation": "export function updateUserStatus(username: string, is_active: boolean) {\r\n  return request<{ user: PublicUser }>(`/api/users/${encodeURIComponent(username)}/status`, {\r\n    method: 'PATCH',\r\n    headers: { 'Content-Type': 'application/json' },\r\n    body: JSON.stringify({ is_active }),\r\n  })\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminUsers.tsx",
+          "lines": [
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "name": "adminCreateUser",
+      "file": "frontend/src/services/api.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/users",
+      "signature": "export function adminCreateUser(username: string, password: string, role: Role) ",
+      "implementation": "export function adminCreateUser(username: string, password: string, role: Role) {\r\n  return postJson<{ user: PublicUser }>('/api/users', { username, password, role })\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminUsers.tsx",
+          "lines": [
+            78
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getWarehouseStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/admin/warehouse/status",
+      "signature": "export function getWarehouseStatus() ",
+      "implementation": "export function getWarehouseStatus() {\r\n  return getJson<WarehouseStatus>('/api/admin/warehouse/status')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminWarehouse.tsx",
+          "lines": [
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getMlAdminStatus",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/admin/ml/status",
+      "signature": "export function getMlAdminStatus() ",
+      "implementation": "export function getMlAdminStatus() {\r\n  return getJson<MlAdminStatus>('/api/admin/ml/status')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminMl.tsx",
+          "lines": [
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "name": "getSystemSettings",
+      "file": "frontend/src/services/api.ts",
+      "method": "GET",
+      "endpoint_expression": "/api/admin/settings",
+      "signature": "export function getSystemSettings() ",
+      "implementation": "export function getSystemSettings() {\r\n  return getJson<SystemSettings>('/api/admin/settings')\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/admin/AdminSettings.tsx",
+          "lines": [
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "name": "login",
+      "file": "frontend/src/services/auth.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/auth/login",
+      "signature": "export async function login(username: string, password: string): Promise<AuthUser> ",
+      "implementation": "export async function login(username: string, password: string): Promise<AuthUser> {\n  const generation = ++sessionGeneration\n  const body = new URLSearchParams({ username, password })\r\n  const r = await fetch(`${API_BASE}/api/auth/login`, {\r\n    method: 'POST',\r\n    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },\r\n    body,\r\n  })\r\n  if (!r.ok) throw new Error(r.status === 401 ? 'Invalid credentials' : `Login failed: ${r.status}`)\r\n  const data = (await r.json()) as { access_token: string; refresh_token: string; user: AuthUser }\n  if (generation !== sessionGeneration) throw new Error('Session changed; stale login discarded.')\n  localStorage.setItem(TOKEN_KEY, data.access_token)\r\n  localStorage.setItem(REFRESH_KEY, data.refresh_token)\r\n  localStorage.setItem(USER_KEY, JSON.stringify(data.user))\r\n  return data.user\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/pages/Login.tsx",
+          "lines": [
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "name": "refreshAccessToken",
+      "file": "frontend/src/services/auth.ts",
+      "method": "POST",
+      "endpoint_expression": "/api/auth/refresh",
+      "signature": "export async function refreshAccessToken(): Promise<string | null> ",
+      "implementation": "export async function refreshAccessToken(): Promise<string | null> {\n  const generation = sessionGeneration\n  const refresh_token = getRefreshToken()\r\n  if (!refresh_token) return null\r\n  try {\r\n    const r = await fetch(`${API_BASE}/api/auth/refresh`, {\r\n      method: 'POST',\r\n      headers: { 'Content-Type': 'application/json' },\r\n      body: JSON.stringify({ refresh_token }),\r\n    })\r\n    if (!r.ok) return null\r\n    const data = (await r.json()) as { access_token: string }\n    if (generation !== sessionGeneration || refresh_token !== getRefreshToken()) return null\n    localStorage.setItem(TOKEN_KEY, data.access_token)\r\n    return data.access_token\r\n  } catch {\r\n    return null\r\n  }\r\n}",
+      "consumers": [
+        {
+          "file": "frontend/src/services/api.ts",
+          "lines": [
+            34
+          ]
+        }
+      ]
+    }
+  ],
+  "type_contracts": [
+    {
+      "name": "DatasetColumn",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface DatasetColumn {\n  name: string; dtype: string; role: string; confidence: number; missing: number; unique: number; constant: boolean; ambiguous_date: boolean\n}"
+    },
+    {
+      "name": "Dataset",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface Dataset {\n  updated_at: string | null\n  dataset_id: string; dataset_name: string; status: string; row_count: number; column_count: number; error: string | null; read_only: boolean\n  schema: { columns?: DatasetColumn[] }\n  semantics: { fields?: Record<string, string>; currency_code?: string | null; domain?: string; ambiguities?: { role: string; candidates: string[] }[] }\n  capabilities: Record<string, { available: boolean; reason: string | null }>\n  quality: { missing_values?: number; duplicate_rows?: number; warnings?: string[] }\n}"
+    },
+    {
+      "name": "Kpis",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface Kpis {\r\n  filters: { date_from: string | null; date_to: string | null; order_status: string | null }\r\n  kpis: {\r\n    total_orders: number\r\n    total_revenue: number\r\n    total_freight: number\r\n    avg_order_value: number\r\n    unique_customers: number\r\n    items_sold: number\r\n    products_sold: number\r\n    active_sellers: number\r\n    avg_review_score: number | null\r\n    avg_delivery_days: number | null\r\n  }\r\n}"
+    },
+    {
+      "name": "MonthlyPoint",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface MonthlyPoint {\r\n  period: string\r\n  orders: number\r\n  revenue: number\r\n}"
+    },
+    {
+      "name": "CategoryPoint",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface CategoryPoint {\r\n  category: string\r\n  revenue: number\r\n  items: number\r\n}"
+    },
+    {
+      "name": "StatusPoint",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface StatusPoint {\r\n  status: string\r\n  orders: number\r\n}"
+    },
+    {
+      "name": "FilterOptions",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface FilterOptions {\n  dynamic?: { field: string; label: string; values: string[] }[]\n  has_date?: boolean\n  categories: string[]\r\n  customer_states: string[]\r\n  seller_states: string[]\r\n  order_statuses: string[]\r\n  payment_types: string[]\r\n  review_scores: number[]\r\n  date_range: { min: string; max: string }\r\n}"
+    },
+    {
+      "name": "MlModel",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface MlModel {\n  compatibility?: { compatible: boolean; reasons: string[]; training_domain: string }\n  metrics_scope?: string\n  name: string\r\n  algorithm: string | null\r\n  trained_at: string | null\r\n  metrics: Record<string, unknown> | null\r\n  artifact_available: boolean\r\n}"
+    },
+    {
+      "name": "MlFeature",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface MlFeature {\r\n  name: string\r\n  status: string\r\n  models: MlModel[]\r\n}"
+    },
+    {
+      "name": "ForecastPoint",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface ForecastPoint {\r\n  date: string\r\n  orders?: number\r\n  revenue?: number\r\n}"
+    },
+    {
+      "name": "MlCompatibility",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface MlCompatibility {\n  compatible: boolean\n  reasons: string[]\n  contract: Record<string, unknown>\n  training_domain: string | null\n  dataset_id: string\n  artifact_available: boolean\n}"
+    },
+    {
+      "name": "MlNotApplicable",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface MlNotApplicable {\n  status: 'not_applicable'\n  reason: string\n  compatibility: MlCompatibility\n  dataset_id: string\n}"
+    },
+    {
+      "name": "CustomerSegmentsResponse",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export type CustomerSegmentsResponse = MlNotApplicable | {\n  status: 'available'\n  segments: Array<{ segment: number; customers: number; monetary: number }>\n  compatibility: MlCompatibility\n  dataset_id: string\n}"
+    },
+    {
+      "name": "AnomaliesResponse",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export type AnomaliesResponse = MlNotApplicable | {\n  status: 'available'\n  n_days: number\n  n_anomalies: number\n  anomalies: Array<{ date: string; orders: number; revenue: number; anomaly: number; score: number; customers?: number; rows?: number }>\n  compatibility: MlCompatibility\n  dataset_id: string\n}"
+    },
+    {
+      "name": "SalesPredictInput",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface SalesPredictInput {\r\n  purchase_month: number\r\n  purchase_weekday: number\r\n  purchase_hour: number\r\n  n_items: number\r\n  customer_state: string\r\n  product_category_name: string\r\n}"
+    },
+    {
+      "name": "SalesPredictionResponse",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export type SalesPredictionResponse = MlNotApplicable | {\n  status: 'available'; predicted_item_revenue: number; currency: string; dataset_id: string\n}"
+    },
+    {
+      "name": "ProductSegment",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface ProductSegment {\r\n  segment: number\r\n  products: number\r\n  revenue: number\r\n  quantity: number\r\n  avg_price: number\r\n  revenue_share: number\r\n  quantity_share: number\r\n}"
+    },
+    {
+      "name": "TopProduct",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface TopProduct {\r\n  product: string\r\n  category: string\r\n  segment: number\r\n  revenue: number\r\n  quantity: number\r\n  avg_price: number\r\n}"
+    },
+    {
+      "name": "ProductSegmentationResponse",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface ProductSegmentationResponse {\n  status?: string\n  reason?: string\n  segments: ProductSegment[]\r\n  top_products: TopProduct[]\r\n  k: number\r\n}"
+    },
+    {
+      "name": "InsightsResponse",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface InsightsResponse {\r\n  answer: string\r\n  sources: string[]\r\n  status: string\r\n  provider: string | null\r\n  role: string\r\n}"
+    },
+    {
+      "name": "SystemStatus",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface SystemStatus {\r\n  app: string\r\n  version: string\r\n  env: string\r\n  auth_required: boolean\r\n  database: string\r\n  python: string\r\n  platform: string\r\n  uptime_seconds: number\r\n}"
+    },
+    {
+      "name": "AdminHealthStatus",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface AdminHealthStatus {\r\n  backend: string\r\n  database: string\r\n  warehouse: string\r\n  ml_models: string\r\n  authentication: string\r\n}"
+    },
+    {
+      "name": "EtlStatus",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface EtlStatus {\r\n  loaded: boolean\r\n  tables: Record<string, number | null>\r\n  olist_dir: string\r\n}"
+    },
+    {
+      "name": "PublicUser",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface PublicUser {\r\n  id: number\r\n  username: string\r\n  role: Role\r\n  is_active: boolean\r\n  created_at: string | null\r\n}"
+    },
+    {
+      "name": "RoleMetadata",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface RoleMetadata {\r\n  name: string\r\n  description: string\r\n  permissions: Record<string, boolean>\r\n}"
+    },
+    {
+      "name": "WarehouseStatus",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface WarehouseStatus {\r\n  dialect: string\r\n  schema_tables: string[]\r\n  warehouse_tables: Record<string, number | null>\r\n  expected_tables: number\r\n  loaded_tables: number\r\n  total_rows: number\r\n  complete: boolean\r\n  source: string\r\n  min_date?: string | null\r\n  max_date?: string | null\r\n}"
+    },
+    {
+      "name": "ArtifactInfo",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface ArtifactInfo {\r\n  file: string\r\n  size_bytes: number\r\n  modified_at: string\r\n}"
+    },
+    {
+      "name": "MlAdminStatus",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface MlAdminStatus {\r\n  models_dir: string\r\n  artifacts: ArtifactInfo[]\r\n  artifact_count: number\r\n  metadata_entries: number\r\n  features: MlFeature[]\r\n  data_dir_exists: boolean\r\n  retraining: string\r\n}"
+    },
+    {
+      "name": "SystemSettings",
+      "file": "frontend/src/services/api.ts",
+      "definition": "export interface SystemSettings {\r\n  app: string\r\n  version: string\r\n  env: string\r\n  auth_required: boolean\r\n  access_token_expire_minutes: number\r\n  refresh_token_expire_minutes: number\r\n  roles: Role[]\r\n  llm: { enabled: boolean; provider: string; timeout_seconds: number }\r\n  dataset: string\r\n  reports: string[]\r\n  secrets_exposed: boolean\r\n}"
+    },
+    {
+      "name": "Role",
+      "file": "frontend/src/services/auth.ts",
+      "definition": "export type Role = 'admin' | 'analyst'"
+    },
+    {
+      "name": "AuthUser",
+      "file": "frontend/src/services/auth.ts",
+      "definition": "export interface AuthUser {\r\n  id: number\r\n  username: string\r\n  role: Role\r\n}"
+    }
+  ]
+}

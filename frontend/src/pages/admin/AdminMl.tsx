@@ -16,7 +16,7 @@ export default function AdminMl() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-medium">Model artifacts</h2>
           <span className="text-xs text-neutral-500">{ml.artifact_count} deployed</span>
@@ -61,7 +61,7 @@ export default function AdminMl() {
         <div className="text-xs text-neutral-500 mt-3">{ml.models_dir}</div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <h2 className="font-medium mb-3">Deployment status</h2>
         <table className="w-full text-sm">
           <thead className="text-neutral-500 text-xs uppercase">

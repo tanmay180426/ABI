@@ -13,7 +13,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 if __name__ == "__main__":
-    source = Path(__file__).resolve().parents[1] / "sem5.db"
+    # Explicit reference fixtures let a sanitized workspace run regressions
+    # without copying a developer database into the source snapshot.
+    source = Path(os.environ.get('SEM5_E2E_REFERENCE_DB') or (Path(__file__).resolve().parents[1] / "sem5.db"))
     with tempfile.TemporaryDirectory(prefix="sem5-e2e-") as directory:
         database = Path(directory) / "warehouse.db"
         if source.exists():

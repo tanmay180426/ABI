@@ -16,7 +16,7 @@ export default function AdminSettings() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <h2 className="font-medium mb-3">Application</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
@@ -50,7 +50,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <h2 className="font-medium mb-3">AI assistant</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
@@ -68,7 +68,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <h2 className="font-medium mb-3">Reports enabled</h2>
         <div className="flex flex-wrap gap-2">
           {settings.reports.map((r) => (
@@ -79,7 +79,7 @@ export default function AdminSettings() {
         </div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
         Secrets are never returned by this endpoint: no signing keys, passwords, tokens or
         environment values are exposed.
       </div>

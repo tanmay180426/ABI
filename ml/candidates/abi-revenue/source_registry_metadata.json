@@ -1,0 +1,70 @@
+
+{
+  "name": "sales_forecast_revenue",
+  "version": "0.2.0",
+  "target": "sales_forecast_revenue",
+  "algorithm": "GradientBoostingRegressor",
+  "training_period": {
+    "start": "2017-09-04",
+    "end": "2024-09-04"
+  },
+  "features_schema": [
+    "year",
+    "month",
+    "quarter",
+    "day_of_week",
+    "week_of_year",
+    "day_of_month",
+    "is_weekend",
+    "revenue_lag_1",
+    "revenue_lag_7",
+    "revenue_lag_14",
+    "revenue_lag_28",
+    "revenue_lag_30",
+    "revenue_lag_365",
+    "orders_lag_1",
+    "orders_lag_7",
+    "orders_lag_14",
+    "orders_lag_28",
+    "orders_lag_30",
+    "orders_lag_365",
+    "revenue_roll_mean_7",
+    "revenue_roll_std_7",
+    "revenue_roll_mean_14",
+    "revenue_roll_std_14",
+    "revenue_roll_mean_30",
+    "revenue_roll_std_30",
+    "revenue_roll_mean_90",
+    "revenue_roll_std_90"
+  ],
+  "metrics": {
+    "model": {
+      "mae": 3401.7013,
+      "rmse": 4502.4229,
+      "r2": 0.6331,
+      "mape": 16.2708
+    }
+  },
+  "status": "available",
+  "artifact": "gradient_boosting_sales_model.joblib",
+  "notes": "Gradient Boosting model trained with lag features and shifted rolling statistics. Future order counts must be estimated because actual future orders are unavailable.",
+  "contract": {
+    "required_semantics": [
+      "date",
+      "revenue"
+    ],
+    "optional_semantics": [],
+    "training_domain": "Brazilian e-commerce",
+    "currency_code": "BRL",
+    "expected_types": {
+      "date": "datetime",
+      "revenue": "numeric"
+    },
+    "minimum_observations": 365,
+    "frequency": "daily",
+    "transformations": "Calendar features, revenue and order lags (1, 7, 14, 28, 30, 365 days), and shifted rolling revenue means and standard deviations (7, 14, 30, 90 days).",
+    "supported_filters": "shared dataset filters before feature aggregation",
+    "output_type": "daily revenue",
+    "automatically_retrained": false
+  }
+}

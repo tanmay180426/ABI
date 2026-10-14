@@ -1,28 +1,57 @@
 import os
-
 from pathlib import Path
+from ipaddress import ip_address
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 load_dotenv()
 
-BACKEND_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_SQLITE_PATH = (BACKEND_DIR / "sem5.db").resolve()
-DEFAULT_DATABASE_URL = f"sqlite:///{DEFAULT_SQLITE_PATH.as_posix()}"
+DEFAULT_DATABASE_URL = f"sqlite:///{(Path(__file__).resolve().parents[2] / 'sem5.db').as_posix()}"
 
 
-def resolve_database_url(url: str | None = None) -> str:
-    candidate = url if url is not None else os.getenv("DATABASE_URL")
-    if not candidate or candidate in {"sqlite:///./sem5.db", "sqlite:///sem5.db"}:
-        return DEFAULT_DATABASE_URL
-    return candidate
+def local_llm_url(value: str) -> str:
+    """Permit only credential-free loopback model servers, never hosted inference."""
+    message = "OLLAMA_BASE_URL must be an HTTP(S) loopback URL without credentials, query or fragment."
+    try:
+        parsed = urlsplit(value)
+        host = parsed.hostname or ""
+        port = parsed.port
+    except ValueError:
+        raise ValueError(message) from None
+    try:
+        local = host == "localhost" or ip_address(host).is_loopback
+    except ValueError:
+        local = False
+    if (not local or parsed.scheme not in {"http", "https"} or parsed.username is not None
+            or parsed.password is not None or parsed.query or parsed.fragment or port == 0):
+        raise ValueError(message)
+    return value.rstrip("/")
 
+
+def local_llm_model(value: str) -> str:
+    if not value.strip() or 'cloud' in value.casefold().split(':')[-1] or '://' in value:
+        raise ValueError("OLLAMA_MODEL must name an installed local model; cloud model tags are not permitted.")
+    return value
 
 class Settings(BaseSettings):
+    model_config = {"hide_input_in_errors": True}
     API_V1_STR: str = "/api"
     DATABASE_URL: str = DEFAULT_DATABASE_URL
+    DATASET_MAX_BYTES: int = Field(default=209715200, ge=1, le=209715200)
+    DATASET_MAX_SPREADSHEET_EXPANDED_BYTES: int = Field(default=209715200, ge=1, le=536870912)
+    DATASET_MAX_ROWS: int = Field(default=100000, ge=1)
+    DATASET_MAX_COLUMNS: int = Field(default=100, ge=1, le=100)
+    DATASET_MAX_CELLS: int = Field(default=2000000, ge=1)
+    DATASET_MAX_SECONDS: int = Field(default=60, ge=1)
+    BUNDLE_MAX_EXPANDED_BYTES: int = Field(default=536870912, ge=1, le=1073741824)
+    BUNDLE_MAX_TABLE_ROWS: int = Field(default=1500000, ge=1)
+    BUNDLE_MAX_TABLE_CELLS: int = Field(default=12000000, ge=1)
+    BUNDLE_MAX_ROWS: int = Field(default=5000000, ge=1)
+    BUNDLE_MAX_CELLS: int = Field(default=40000000, ge=1)
+    BUNDLE_MAX_SECONDS: int = Field(default=900, ge=1, le=3600)
     SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-change-me")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
     REFRESH_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "10080"))
@@ -41,22 +70,30 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "ollama")
     LLM_TIMEOUT_SECONDS: int = int(os.getenv("LLM_TIMEOUT_SECONDS", "20"))
 
-    # Dataset upload configuration
-    DATASET_MAX_BYTES: int = int(os.getenv("DATASET_MAX_BYTES", str(100 * 1024 * 1024)))
-    DATASET_MAX_ZIP_BYTES: int = int(os.getenv("DATASET_MAX_ZIP_BYTES", str(500 * 1024 * 1024)))
-    DATASET_MAX_BATCH_FILES: int = int(os.getenv("DATASET_MAX_BATCH_FILES", "100"))
-    DATASET_MAX_BATCH_BYTES: int = int(os.getenv("DATASET_MAX_BATCH_BYTES", str(600 * 1024 * 1024)))
-    DATASET_MAX_EXTRACTED_BYTES: int = int(os.getenv("DATASET_MAX_EXTRACTED_BYTES", str(1024 * 1024 * 1024)))
-    DATASET_MAX_EXTRACTED_FILES: int = int(os.getenv("DATASET_MAX_EXTRACTED_FILES", "2000"))
-    DATASET_MAX_ROWS: int = int(os.getenv("DATASET_MAX_ROWS", "2000000"))
-    DATASET_MAX_COLUMNS: int = int(os.getenv("DATASET_MAX_COLUMNS", "100"))
-    DATASET_MAX_CELLS: int = int(os.getenv("DATASET_MAX_CELLS", "40000000"))
-    DATASET_MAX_ZIP_DEPTH: int = int(os.getenv("DATASET_MAX_ZIP_DEPTH", "10"))
-    DATASET_MAX_COMPRESSION_RATIO: float = float(os.getenv("DATASET_MAX_COMPRESSION_RATIO", "100.0"))
+    @field_validator("LLM_PROVIDER")
+    @classmethod
+    def free_provider(cls, value):
+        if value != "ollama":
+            raise ValueError("LLM_PROVIDER supports only ollama; use ENABLE_LLM_ASSISTANT=false for deterministic-only mode.")
+        return value
+
+    @field_validator("OLLAMA_BASE_URL")
+    @classmethod
+    def loopback_provider(cls, value):
+        return local_llm_url(value)
+
+    @field_validator("OLLAMA_MODEL")
+    @classmethod
+    def local_model(cls, value):
+        return local_llm_model(value)
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
-    def _normalize_database_url(cls, v: str | None) -> str:
-        return resolve_database_url(v)
+    def stable_default_database(cls, value):
+        # The documented dev database must not depend on the launch directory.
+        # Preserve explicit custom databases, including disposable test storage.
+        if value in (None, "", "sqlite:///./sem5.db", "sqlite:///sem5.db"):
+            return DEFAULT_DATABASE_URL
+        return value
 
 settings = Settings()

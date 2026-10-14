@@ -30,7 +30,7 @@ export default function AdminHealth() {
         </button>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <h2 className="font-medium mb-3">Service Health</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
           <div>
@@ -71,7 +71,7 @@ export default function AdminHealth() {
         </div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <h2 className="font-medium mb-3">System Information</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div>
@@ -105,7 +105,7 @@ export default function AdminHealth() {
         </div>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
         Secrets (JWT signing key, database credentials, environment values) are deliberately not
         exposed here.
       </div>

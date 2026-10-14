@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/Workspace'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import FilterBar from '@/components/FilterBar'
 
@@ -15,13 +16,13 @@ export default function AnalyticsLayout() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Analytics</h1>
+        <PageHeader title="Analytics" />
         <p className="text-sm text-neutral-500">
-          In-depth analysis of the active dataset and multi-file collections.
+          In-depth analysis of the active dataset.
         </p>
       </div>
 
-      <div className="flex items-center gap-4 border-b border-neutral-800 pb-2">
+      <div className="abi-tabs">
         {TABS.map((t) => (
           <NavLink
             key={t.to}

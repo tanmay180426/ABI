@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/Workspace'
 import { useEffect, useState } from 'react'
 import {
   BarChart,
@@ -14,7 +15,7 @@ import FilterBar from '@/components/FilterBar'
 import { KpiCard } from '@/components/KpiCard'
 import { getProductSegments, type ProductSegmentationResponse } from '@/services/api'
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1']
+const COLORS = ['var(--chart-1)', 'var(--chart-5)', '#ec4899', 'var(--chart-3)', 'var(--chart-2)', 'var(--chart-5)']
 
 const fmtMoney = (n: number) =>
   `R$ ${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
@@ -43,7 +44,7 @@ export default function ProductSegmentation() {
       <FilterBar />
 
       <div>
-        <h1 className="text-2xl font-semibold">Product Segmentation</h1>
+        <PageHeader title="Product Segmentation" />
         <p className="text-sm text-neutral-500">
           K-Means clustering on product engagement (revenue, quantity, price, weight).
           Applies your current filters before inference with the existing trained model.
@@ -81,15 +82,15 @@ export default function ProductSegmentation() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+            <div className="abi-panel p-4 rounded-lg border border-neutral-800">
               <h2 className="mb-4 font-medium">Product Count by Segment</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={data.segments}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                  <XAxis dataKey="segment" tickFormatter={(v) => `C${v}`} stroke="#666" fontSize={11} />
-                  <YAxis stroke="#666" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                  <XAxis dataKey="segment" tickFormatter={(v) => `C${v}`} stroke="rgb(var(--muted))" fontSize={11} />
+                  <YAxis stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                   <Tooltip
-                    contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                    contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                     labelFormatter={(label) => `Cluster ${label}`}
                   />
                   <Bar dataKey="products" name="Products">
@@ -101,15 +102,15 @@ export default function ProductSegmentation() {
               </ResponsiveContainer>
             </div>
 
-            <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+            <div className="abi-panel p-4 rounded-lg border border-neutral-800">
               <h2 className="mb-4 font-medium">Revenue Contribution by Segment</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={data.segments}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                  <XAxis dataKey="segment" tickFormatter={(v) => `C${v}`} stroke="#666" fontSize={11} />
-                  <YAxis stroke="#666" fontSize={11} tickFormatter={(v) => `R$${Math.round(v / 1000)}k`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                  <XAxis dataKey="segment" tickFormatter={(v) => `C${v}`} stroke="rgb(var(--muted))" fontSize={11} />
+                  <YAxis stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `R$${Math.round(v / 1000)}k`} />
                   <Tooltip
-                    contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                    contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                     formatter={(val: number) => fmtMoney(val)}
                     labelFormatter={(label) => `Cluster ${label}`}
                   />
@@ -123,7 +124,7 @@ export default function ProductSegmentation() {
             </div>
           </div>
 
-          <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+          <div className="abi-panel p-4 rounded-lg border border-neutral-800">
             <h2 className="mb-4 font-medium">Segment Profiles</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -159,7 +160,7 @@ export default function ProductSegmentation() {
             </div>
           </div>
 
-          <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+          <div className="abi-panel p-4 rounded-lg border border-neutral-800">
             <h2 className="mb-4 font-medium">Top Products by Segment (Sample)</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

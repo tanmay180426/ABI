@@ -13,6 +13,7 @@ same metric reconciles across pages for the same filters.
 from __future__ import annotations
 
 from typing import Optional
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -22,6 +23,17 @@ from app.analytics.filters import GRAINS, Filters, analytics_filters, parse_filt
 from app.database.deps import get_db
 
 router = APIRouter()
+
+
+@router.get("/business")
+def business_evidence(
+    domain: Literal['revenue', 'customers', 'sellers'] = 'revenue',
+    f: Filters = Depends(analytics_filters),
+    db: Session = Depends(get_db),
+):
+    """Opt-in evidence without re-running every legacy dashboard aggregate."""
+    from app.analytics.business import evidence
+    return evidence(db, f, domain)
 
 
 def _grain(grain: Optional[str]) -> str:
@@ -43,8 +55,10 @@ def overview(
     db: Session = Depends(get_db),
 ):
     """Dashboard payload: KPIs, series and distributions in one request."""
-    chosen = _grain(grain) if grain else None
-    return metrics.overview(db, f, chosen)
+    view = metrics.overview(db, f)
+    if grain:
+        view["time_series" if "metric_cards" in view else "revenue_series"] = metrics.time_series(db, f, _grain(grain))
+    return view
 
 
 @router.get("/sales")
@@ -105,18 +119,3 @@ def sellers(
 @router.get("/delivery")
 def delivery(f: Filters = Depends(analytics_filters), db: Session = Depends(get_db)):
     return metrics.delivery(db, f)
-
-
-@router.get("/automated-insights")
-def automated_insights(f: Filters = Depends(analytics_filters), db: Session = Depends(get_db)):
-    """Generate evidence-based analytical insights for the currently selected dataset."""
-    ds = db.info.get("dataset")
-    if not ds:
-        return {"insights": [], "dataset_id": None}
-    from app.analytics.insights_engine import generate_dataset_insights
-    return {
-        "dataset_id": ds.id,
-        "dataset_name": ds.name,
-        "insights": generate_dataset_insights(db, ds, f)
-    }
-

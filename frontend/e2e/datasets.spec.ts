@@ -9,6 +9,7 @@ test('real upload, filters, chatbot, ML applicability, switching and filtered ex
   const ids: string[] = []
   const names = [`Sales A ${Date.now()}`, `Sales B ${Date.now()}`, `Students ${Date.now()}`]
   let token = ''
+  let originalDatasetId: string | null = null
   try {
     await page.goto('/login')
     await page.getByLabel('Username').fill('analyst')
@@ -16,6 +17,9 @@ test('real upload, filters, chatbot, ML applicability, switching and filtered ex
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page).toHaveURL(/\/dashboard/)
     token = await page.evaluate(() => localStorage.getItem('sem5_token') || '')
+    originalDatasetId = (await (await page.request.get(`${apiBase}/api/datasets`, {
+      headers: { Authorization: 'Bearer ' + token },
+    })).json()).active_dataset_id
     await page.getByRole('link', { name: 'Dataset Manager' }).click()
     for (const [i, content] of [sales, sales.replace(',200\n', ',1000\n').replace(',800\n', ',4000\n'), students].entries()) {
       await page.getByLabel('Dataset name').fill(names[i])
@@ -97,7 +101,10 @@ test('real upload, filters, chatbot, ML applicability, switching and filtered ex
       for (const id of ids) await page.request.delete(`${apiBase}/api/datasets/${id}`, { headers })
       const list = await (await page.request.get(`${apiBase}/api/datasets`, { headers })).json()
       const reference = list.datasets.find((d: { read_only: boolean }) => d.read_only)
-      if (reference) await page.request.post(`${apiBase}/api/datasets/${reference.dataset_id}/select`, { headers })
+      const restoreId = list.datasets.flatMap((ds: { dataset_id: string; tables?: { dataset_id: string }[] }) => ds.tables || [ds])
+        .some((ds: { dataset_id: string }) => ds.dataset_id === originalDatasetId)
+        ? originalDatasetId : reference?.dataset_id
+      if (restoreId) await page.request.post(`${apiBase}/api/datasets/${restoreId}/select`, { headers })
     }
   }
 })

@@ -27,7 +27,13 @@ if IS_SQLITE:
         this path.
         """
         cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA mmap_size=268435456")  # 256MB mapping
+        # Large private bundle transactions must not block auth/status readers.
+        # WAL preserves atomic commits while readers see the last committed state.
+        cursor.execute('PRAGMA journal_mode=WAL')
+        cursor.execute('PRAGMA busy_timeout=10000')
+        # Virtual, demand-paged read mapping, not a 2 GiB resident allocation.
+        # Large bundles place fact/index pages beyond the old 256 MiB window.
+        cursor.execute("PRAGMA mmap_size=2147483648")
         cursor.execute("PRAGMA cache_size=-16384")  # 16MB page cache per connection
         cursor.execute("PRAGMA temp_store=MEMORY")
         cursor.close()

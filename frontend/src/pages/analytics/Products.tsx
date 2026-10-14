@@ -64,19 +64,19 @@ export default function Products() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Revenue by Category</h2>
           {by_category && by_category.length > 0 ? (
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={by_category.slice(0, 20)} layout="vertical" margin={{ left: 100 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" horizontal={false} />
-                <XAxis type="number" stroke="#666" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <YAxis type="category" dataKey="category" stroke="#666" fontSize={10} width={100} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" horizontal={false} />
+                <XAxis type="number" stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <YAxis type="category" dataKey="category" stroke="rgb(var(--muted))" fontSize={10} width={100} />
                 <Tooltip
                   formatter={(v: number, name: string) => [name === 'revenue' ? fmtMoney(v) : v, name]}
-                  contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                  contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                 />
-                <Bar dataKey="revenue" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" fill="var(--chart-1)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -86,7 +86,7 @@ export default function Products() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Category Details</h2>
           <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
             {by_category?.map((c: any) => (
@@ -103,7 +103,7 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top Products (Revenue)</h2>
           <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
             {top_by_revenue?.map((p: any) => (
@@ -120,7 +120,7 @@ export default function Products() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top Products (Quantity)</h2>
           <div className="space-y-3 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
             {top_by_quantity?.map((p: any) => (

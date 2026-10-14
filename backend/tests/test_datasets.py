@@ -271,50 +271,32 @@ def test_incompatible_models_do_not_execute(isolated, analyst_auth, monkeypatch)
     assert 'predicted_item_revenue' not in body
 
 
-def test_insufficient_history_returns_explicit_compatibility_error(isolated, analyst_auth):
-    client, _ = isolated
-    header = 'date,order_id,customer_id,product,category,region,quantity,price,revenue,weight_g\n'
-    rows = [f'{date(2025,1,1)+timedelta(days=i)},o{i},c{i%5},p{i%4},Books,SP,2,100,200,100' for i in range(40)]
-    ds = upload(client, analyst_auth, (header + '\n'.join(rows)).encode())
-    r = client.patch(f"/api/datasets/{ds['dataset_id']}/schema", json={'fields': {}, 'currency_code': 'BRL', 'domain': 'commerce'}, headers=analyst_auth)
-    assert r.status_code == 200
-    auth = scoped(analyst_auth, ds)
-    response = client.get('/api/ml/forecast?target=revenue&periods=7', headers=auth)
-    assert response.status_code == 200, response.text
-    body = response.json()
-    assert body['status'] == 'not_applicable', body
-    assert body['compatibility']['compatible'] is False
-    assert 'At least 365 daily observations are required after filtering.' in body['reason']
-
-
 def test_existing_models_execute_on_compatible_uploaded_data(isolated, analyst_auth):
     client, _ = isolated
     header = 'date,order_id,customer_id,product,category,region,quantity,price,revenue,weight_g\n'
-    rows = [f'{date(2023,1,1)+timedelta(days=i)},o{i},c{i%5},p{i%4},Books,SP,2,100,200,100' for i in range(370)]
-    ds = upload(client, analyst_auth, (header + '\n'.join(rows)).encode())
-    r = client.patch(f"/api/datasets/{ds['dataset_id']}/schema", json={'fields': {}, 'currency_code': 'BRL', 'domain': 'commerce'}, headers=analyst_auth)
+    rows = [f'{date(2025,1,1)+timedelta(days=i)},o{i},c{i%5},p{i%4},Books,SP,2,100,200,100' for i in range(40)]
+    ds = upload(client,analyst_auth,(header+'\n'.join(rows)).encode())
+    r = client.patch(f"/api/datasets/{ds['dataset_id']}/schema",json={'fields':{},'currency_code':'BRL','domain':'commerce'},headers=analyst_auth)
     assert r.status_code == 200
-    auth = scoped(analyst_auth, ds)
-    for path in ['/api/ml/forecast?target=revenue&periods=7', '/api/ml/forecast?target=orders&periods=7', '/api/ml/product-segmentation', '/api/ml/anomalies', '/api/ml/segments/customers']:
-        response = client.get(path, headers=auth)
-        assert response.status_code in {200, 503}, response.text
-        if response.status_code == 200:
-            body = response.json()
-            assert body['status'] == 'available', body
-            assert body['compatibility']['compatible'] is True
-            assert body['dataset_id'] == ds['dataset_id']
-            if 'forecast' in path:
-                assert len(body['forecast']) == 7
-                target = 'orders' if 'target=orders' in path else 'revenue'
-                assert sum(p[target] for p in body['history_tail']) == (30 if target == 'orders' else 6000)
-            if 'product-segmentation' in path:
-                assert sum(s['revenue'] for s in body['segments']) == 8000
-                assert sum(s['products'] for s in body['segments']) == 4
+    auth = scoped(analyst_auth,ds)
+    for path in ['/api/ml/forecast?target=revenue&periods=7','/api/ml/forecast?target=orders&periods=7','/api/ml/product-segmentation','/api/ml/anomalies','/api/ml/segments/customers']:
+        response = client.get(path,headers=auth)
+        assert response.status_code == 200,response.text
+        body = response.json()
+        assert body['status'] == 'available',body
+        assert body['compatibility']['compatible'] is True
+        assert body['dataset_id'] == ds['dataset_id']
+        if 'forecast' in path:
+            assert len(body['forecast']) == 7
+            target = 'orders' if 'target=orders' in path else 'revenue'
+            assert sum(p[target] for p in body['history_tail']) == (30 if target == 'orders' else 6000)
+        if 'product-segmentation' in path:
+            assert sum(s['revenue'] for s in body['segments']) == 8000
+            assert sum(s['products'] for s in body['segments']) == 4
     prediction = client.post('/api/ml/predict/sales', headers=auth, json={
         'purchase_month': 1, 'purchase_weekday': 2, 'purchase_hour': 12,
         'n_items': 2, 'customer_state': 'SP', 'product_category_name': 'Books'})
-    assert prediction.status_code in {200, 503}, prediction.text
-    if prediction.status_code == 200:
-        assert prediction.json()['status'] == 'available'
-        assert prediction.json()['currency'] == 'BRL'
-        assert prediction.json()['dataset_id'] == ds['dataset_id']
+    assert prediction.status_code == 200, prediction.text
+    assert prediction.json()['status'] == 'available'
+    assert prediction.json()['currency'] == 'BRL'
+    assert prediction.json()['dataset_id'] == ds['dataset_id']

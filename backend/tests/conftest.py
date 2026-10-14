@@ -17,9 +17,14 @@ from tests.database_fixture import test_storage, seed_synthetic_warehouse  # noq
 
 def pytest_addoption(parser):
     parser.addoption('--reference-db', default=None, help='Optional read-only Olist warehouse snapshot for baseline regressions.')
+    parser.addoption('--free-only-network', action='store_true', help='Deny non-loopback DNS/socket connections and strip hosted-provider credentials in this test process.')
 
 
 def pytest_configure(config):
+    if config.getoption('--free-only-network'):
+        for name in list(os.environ):
+            if any(provider in name.upper() for provider in ('OPENAI', 'ANTHROPIC', 'GEMINI', 'OPENROUTER')) and any(token in name.upper() for token in ('KEY', 'TOKEN')):
+                os.environ.pop(name, None)
     storage = test_storage(config.getoption('--reference-db'))
     path = storage.__enter__()
     config._sem5_storage = storage
@@ -86,3 +91,44 @@ def auth(admin_token: str) -> dict:
 @pytest.fixture()
 def analyst_auth(analyst_token: str) -> dict:
     return {"Authorization": f"Bearer {analyst_token}"}
+
+
+@pytest.fixture(autouse=True)
+def free_only_network_guard(request, monkeypatch):
+    if not request.config.getoption('--free-only-network'):
+        yield
+        return
+    import socket
+    from ipaddress import ip_address
+    violations = []
+    def check(host):
+        if isinstance(host, bytes):
+            host = host.decode('ascii')
+        if host == 'localhost':
+            return
+        try:
+            if ip_address(host).is_loopback:
+                return
+        except ValueError:
+            pass
+        violations.append('Non-loopback network access attempted.')
+        raise AssertionError('Non-loopback network access blocked by free-only test guard.')
+    original_connect = socket.socket.connect
+    original_connect_ex = socket.socket.connect_ex
+    original_resolve = socket.getaddrinfo
+    def connect(sock, address):
+        if isinstance(address, tuple):
+            check(address[0])
+        return original_connect(sock, address)
+    def connect_ex(sock, address):
+        if isinstance(address, tuple):
+            check(address[0])
+        return original_connect_ex(sock, address)
+    def resolve(host, *args, **kwargs):
+        check(host)
+        return original_resolve(host, *args, **kwargs)
+    monkeypatch.setattr(socket.socket, 'connect', connect)
+    monkeypatch.setattr(socket.socket, 'connect_ex', connect_ex)
+    monkeypatch.setattr(socket, 'getaddrinfo', resolve)
+    yield
+    assert not violations, 'Core request attempted external network access, even if its exception was handled.'

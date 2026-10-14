@@ -1,8 +1,7 @@
-import { getRefreshToken, getToken, getSessionGeneration, refreshAccessToken, type Role } from './auth'
+import { expireSession, getRefreshToken, getToken, getSessionGeneration, refreshAccessToken, type Role } from './auth'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 let activeDatasetId: string | null = null
-let activeCollectionId: string | null = null
 let datasetVersion = 0
 const pendingGets = new Map<string, Promise<unknown>>()
 
@@ -12,41 +11,49 @@ export function getRequestContext(): string {
 
 export function setDatasetScope(id: string | null) {
   activeDatasetId = id
-  activeCollectionId = null
-  datasetVersion += 1
-}
-
-export function setCollectionScope(id: string | null) {
-  activeCollectionId = id
-  activeDatasetId = null
   datasetVersion += 1
 }
 
 function authHeaders(): Record<string, string> {
   const token = getToken()
   return { ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(activeCollectionId ? { 'X-Collection-ID': activeCollectionId } : {}),
     ...(activeDatasetId ? { 'X-Dataset-ID': activeDatasetId } : {}) }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, retry = true, version = datasetVersion): Promise<T> {
-  const owner = localStorage.getItem('sem5_user')
+function ensureContext(context: string, message = 'Dataset context changed; stale response discarded.') {
+  if (context !== getRequestContext()) throw new Error(message)
+}
+
+async function requestResponse(path: string, init: RequestInit = {}, retry = true, context = getRequestContext()): Promise<Response> {
+  const session = getSessionGeneration()
   const r = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: { ...(init.headers as Record<string, string>), ...authHeaders() },
   })
-  if (version !== datasetVersion || owner !== localStorage.getItem('sem5_user')) throw new Error('Dataset context changed; stale response discarded.')
+  ensureContext(context)
   if (r.status === 401 && retry && getRefreshToken()) {
     const token = await refreshAccessToken()
-    if (token) return request<T>(path, init, false, version)
+    ensureContext(context)
+    if (token) return requestResponse(path, init, false, context)
+  }
+  if (r.status === 401 && (!retry || !getRefreshToken())) {
+    expireSession(session)
+    throw new Error('Session expired. Sign in again. (Request failed: 401)')
   }
   if (!r.ok) {
     const error = await r.json().catch(() => null)
+    ensureContext(context)
     throw new Error(typeof error?.detail === 'string' ? error.detail : `Request failed: ${r.status}`)
   }
-  if (r.status === 204) return undefined as T
+  return r
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const context = getRequestContext()
+  const r = await requestResponse(path, init, true, context)
+  if (r.status === 204) { ensureContext(context); return undefined as T }
   const data = await r.json()
-  if (version !== datasetVersion) throw new Error('Dataset context changed; stale response discarded.')
+  ensureContext(context)
   return data as T
 }
 
@@ -54,82 +61,62 @@ export interface DatasetColumn {
   name: string; dtype: string; role: string; confidence: number; missing: number; unique: number; constant: boolean; ambiguous_date: boolean
 }
 export interface Dataset {
-  created_at?: string | null
+  source_type?: string; bundle_id?: string; relative_path?: string; internal_name?: string; original_filename?: string
+  tables?: Dataset[]; relational_analysis?: { supported: boolean; reason: string }
   updated_at: string | null
-  dataset_id: string; dataset_name: string; status: string; source_type?: string; row_count: number; column_count: number; error: string | null; read_only: boolean
+  dataset_id: string; dataset_name: string; status: string; row_count: number; column_count: number; error: string | null; read_only: boolean
   schema: { columns?: DatasetColumn[] }
   semantics: { fields?: Record<string, string>; currency_code?: string | null; domain?: string; ambiguities?: { role: string; candidates: string[] }[] }
   capabilities: Record<string, { available: boolean; reason: string | null }>
   quality: { missing_values?: number; duplicate_rows?: number; warnings?: string[] }
-  provenance?: { source_type?: string; original_filename?: string; relative_path?: string; archive?: string; file_size?: number }
 }
-
-export interface UploadLimits {
-  max_bytes: number
-  max_bytes_mb: number
-  max_zip_bytes: number
-  max_zip_bytes_mb: number
-  max_batch_bytes: number
-  max_batch_bytes_mb: number
-  max_batch_files: number
-  max_extracted_bytes: number
-  max_extracted_bytes_mb: number
-  max_extracted_files: number
-  max_rows: number
-  max_columns: number
-  max_cells: number
-  max_zip_depth: number
-  max_compression_ratio: number
-  supported_file_types: string[]
-  supported_archive_types: string[]
+export interface UploadLimits { max_bytes: number; max_rows: number; max_columns: number; max_cells: number; max_files: number; max_seconds: number; max_expanded_bytes?: number; bundle_max_rows?: number; bundle_max_cells?: number; bundle_max_seconds?: number; max_table_rows?: number; max_table_cells?: number }
+export interface ImportJob { job_id: string; status: string; stage: string; completed_tables: number; total_tables: number; stored_rows: number; current_file?: string; error?: string; result?: Dataset }
+const pendingBundleKey = () => `sem5_pending_bundle:${localStorage.getItem('sem5_user')}`
+export function cancelBundleImport() {
+  const id = localStorage.getItem(pendingBundleKey())
+  return id ? request<ImportJob>(`/api/datasets/bundles/jobs/${id}/cancel`, { method: 'POST' }) : Promise.resolve(null)
 }
-
-export interface CollectionItem {
-  collection_id: string
-  collection_name: string
-  source_mode: 'ZIP_COLLECTION' | 'FOLDER_COLLECTION' | 'INDIVIDUAL_FILE' | 'EXPLICIT_MULTI_FILE_SELECTION'
-  source_type: 'zip' | 'folder' | 'single'
-  dataset_count: number
-  total_rows: number
-  dataset_ids: string[]
-  datasets: Dataset[]
+export async function resumeBundleImport(progress?: (job: ImportJob) => void): Promise<Dataset | null> {
+  const key = pendingBundleKey(); const id = localStorage.getItem(key)
+  if (!id) return null
+  while (true) {
+    const job = await request<ImportJob>(`/api/datasets/bundles/jobs/${id}`)
+    progress?.(job)
+    if (job.status === 'READY' && job.result) { localStorage.removeItem(key); return job.result }
+    if (job.status === 'FAILED' || job.status === 'CANCELLED') { localStorage.removeItem(key); throw new Error(job.error || 'Import cancelled. Nothing was imported.') }
+    await new Promise(resolve => window.setTimeout(resolve, 1000))
+  }
 }
-
-export function getUploadLimits() { return getJson<UploadLimits>('/api/datasets/limits') }
-export function getDatasetCollections() { return getJson<{ collections: CollectionItem[] }>('/api/datasets/collections') }
-export function listDatasets() { return getJson<{ datasets: Dataset[]; active_dataset_id: string | null; active_source?: { source_mode: CollectionItem['source_mode']; source_id: string | null } }>('/api/datasets') }
+export function getUploadLimits() { return getJson<UploadLimits>('/api/datasets/upload-limits') }
+export function getZipManifest(file: File) {
+  const form = new FormData(); form.append('file', file)
+  return request<{ files: { path: string; bytes: number }[]; total_bytes: number; ignored?: {path:string;reason:string}[] }>('/api/datasets/bundles/zip-preview', { method: 'POST', body: form })
+}
+export async function uploadDatasetBundle(files: File[], name: string, zip = false, progress?: (job: ImportJob) => void) {
+  const form = new FormData(); form.append('name', name)
+  for (const file of files) {
+    form.append(zip ? 'file' : 'files', file)
+    if (!zip) form.append('paths', file.webkitRelativePath || file.name)
+  }
+  const result = await request<Dataset | ImportJob>(zip ? '/api/datasets/bundles/zip' : '/api/datasets/bundles/upload', { method: 'POST', body: form })
+  if ('job_id' in result) {
+    localStorage.setItem(pendingBundleKey(), result.job_id)
+    progress?.(result)
+    const dataset = await resumeBundleImport(progress)
+    if (!dataset) throw new Error('Import status was lost. Check Dataset Manager before retrying.')
+    return dataset
+  }
+  return result
+}
+export function listDatasets() { return getJson<{ datasets: Dataset[]; active_dataset_id: string | null }>('/api/datasets') }
 export function selectDataset(id: string) { return request<Dataset>(`/api/datasets/${id}/select`, { method: 'POST' }) }
-export function selectCollection(id: string) {
-  return request<{ collection_id: string; source_mode: CollectionItem['source_mode']; collection_name: string; datasets: Dataset[] }>(`/api/datasets/collections/${encodeURIComponent(id)}/select`, { method: 'POST' })
-}
 export function deleteDataset(id: string) { return request<void>(`/api/datasets/${id}`, { method: 'DELETE' }) }
-export interface BatchUploadResult {
-  datasets: Dataset[]
-  successful: number
-  failed: number
-  skipped?: number
-  skipped_files?: Array<{ filename?: string; path?: string; reason: string }>
-  errors: Array<{ filename: string; path?: string; error: string }>
-}
-
+export function getDatasetPreview(id: string) { return getJson<{ columns: string[]; rows: Record<string, string | number | null>[] }>(`/api/datasets/${id}/preview`) }
 export function uploadDataset(file: File, name: string) {
   const form = new FormData(); form.append('file', file); form.append('name', name)
   return request<Dataset>('/api/datasets/upload', { method: 'POST', body: form })
 }
-
-export function uploadBatchDatasets(files: File[], sourceMode: 'FOLDER_COLLECTION' | 'EXPLICIT_MULTI_FILE_SELECTION' = 'EXPLICIT_MULTI_FILE_SELECTION') {
-  const form = new FormData()
-  files.forEach(f => form.append('files', f))
-  form.append('source_mode', sourceMode)
-  return request<BatchUploadResult & { collection_id: string | null; source_mode: CollectionItem['source_mode'] }>('/api/datasets/upload-batch', { method: 'POST', body: form })
-}
-
-export function uploadZipDataset(file: File) {
-  const form = new FormData()
-  form.append('file', file)
-  return request<BatchUploadResult & { collection_id: string; source_mode: CollectionItem['source_mode'] }>('/api/datasets/upload-zip', { method: 'POST', body: form })
-}
-
 export function updateDatasetSchema(id: string, schema: { fields: Record<string, string | null>; currency_code: string | null; domain: string; date_order?: string }) {
   return request<Dataset>(`/api/datasets/${id}/schema`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(schema) })
 }
@@ -138,7 +125,7 @@ function getJson<T>(path: string): Promise<T> {
   // Coalesce only concurrent identical reads (including Strict Mode effects).
   // Results are never cached after completion, and identity includes the user
   // and dataset generation so a switch cannot reuse an old response.
-  const key = `${localStorage.getItem('sem5_user')}|${datasetVersion}|${path}`
+  const key = `${getRequestContext()}|${path}`
   const pending = pendingGets.get(key)
   if (pending) return pending as Promise<T>
   const result = request<T>(path).finally(() => pendingGets.delete(key))
@@ -255,6 +242,14 @@ export function getAnalyticsDelivery(params: Record<string, string> = {}) {
 
 // ---- ML ----
 
+function modelParams(params: Record<string, string>) {
+  // Chart grain controls analytics presentation, not trained daily/entity inputs.
+  // Preserve dataset/date/dimension filters; ML endpoints reject non-daily grains.
+  const selected = { ...params }
+  delete selected.grain
+  return selected
+}
+
 function postJson<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, {
     method: 'POST',
@@ -264,7 +259,8 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 export interface MlModel {
-  compatibility?: { compatible: boolean; reasons: string[]; training_domain: string }
+  runtime_ready?: boolean; runtime_reason?: string; version?: string
+  compatibility?: { compatible: boolean; reasons: string[]; training_domain: string | null }
   metrics_scope?: string
   name: string
   algorithm: string | null
@@ -280,7 +276,7 @@ export interface MlFeature {
 }
 
 export function getMlStatus(params: Record<string, string> = {}) {
-  return getJson<{ features: MlFeature[] }>(`/api/ml/status?${new URLSearchParams(params)}`)
+  return getJson<{ features: MlFeature[]; source_candidates?: MlFeature[] }>(`/api/ml/status?${new URLSearchParams(modelParams(params))}`)
 }
 
 export interface ForecastPoint {
@@ -289,74 +285,56 @@ export interface ForecastPoint {
   revenue?: number
 }
 
+export interface ForecastEvaluationPoint {
+  date: string
+  actual: number
+  predicted: number
+  residual: number
+}
+
+export interface ForecastEvaluationResponse {
+  status: 'available'
+  target: 'orders' | 'revenue'
+  model: string
+  model_version?: string
+  data_scope: string
+  target_definition: string
+  training_period: [string, string]
+  validation_period: [string, string]
+  evaluation_period: [string, string]
+  forecast_horizon_days: number
+  n_evaluated: number
+  metrics: Record<string, number | string | null>
+  baseline_metrics: Record<string, number | string | null> | null
+  candidate_metrics: Record<string, Record<string, number | string | null>>
+  validation_metrics: Record<string, Record<string, number | string | null>>
+  validation_windows: { validation_period: [string, string]; training_rows: number; metrics: Record<string, Record<string, number | string | null>> }[]
+  data_sha256: string
+  points: ForecastEvaluationPoint[]
+}
+
+export function getForecastEvaluation(target: 'orders' | 'revenue') {
+  return getJson<ForecastEvaluationResponse>(`/api/ml/forecast/evaluation?${new URLSearchParams({ target })}`)
+}
+
+export interface BusinessEvidenceResponse {
+  status: string; source: string; currency_code?: string | null; measurement_window?: string
+  cards: { label: string; value: number | null }[]
+  series: { period: string; first_time?: number; returning?: number; revenue?: number }[]
+  frequency?: { orders: number; customers: number }[]
+  rankings: { label: string; value: number; orders?: number; late?: number; mean_late_days?: number | null }[]
+  recommendations: { id: string; title: string; priority: string; observation: string; suggested_action: string; measurement_window: string; limitations: string; metric_source: string; evidence: Record<string, unknown> }[]
+  limitations: string[]
+}
+
+export function getBusinessEvidence(domain: 'revenue' | 'customers' | 'sellers', params: Record<string, string> = {}) {
+  return getJson<BusinessEvidenceResponse>(`/api/analytics/business?${new URLSearchParams({ ...params, domain })}`)
+}
+
 export function getForecast(periods = 30, target: 'orders' | 'revenue' = 'orders', params: Record<string, string> = {}) {
-  return getJson<{ history_tail: ForecastPoint[]; forecast: ForecastPoint[]; status?: string; reason?: string }>(
-    `/api/ml/forecast?${new URLSearchParams({ ...params, periods: String(periods), target })}`,
+  return getJson<{ history_tail: ForecastPoint[]; forecast: ForecastPoint[]; status?: string; reason?: string; model?: string; model_version?: string }>(
+    `/api/ml/forecast?${new URLSearchParams({ ...modelParams(params), periods: String(periods), target })}`,
   )
-}
-
-export interface ForecastObjective {
-  label: string
-  target_column: string | null
-  description: string
-  available: boolean
-}
-
-export interface ForecastOptions {
-  dataset_id: string
-  dataset_name: string
-  date_columns: string[]
-  target_columns: string[]
-  default_date_column?: string
-  default_target_column?: string
-  objectives?: Record<string, ForecastObjective>
-  compatible: boolean
-  reason?: string
-}
-
-export interface DatasetForecastResult {
-  status: string
-  compatible: boolean
-  reason?: string
-  dataset_id: string
-  dataset_name: string
-  target_column: string
-  date_column: string
-  grain: string
-  periods: number
-  historical: Array<{ date: string; actual: number }>
-  validation: Array<{ date: string; actual: number; predicted: number }>
-  forecast: Array<{ date: string; forecast: number; lower_bound: number; upper_bound: number }>
-  metrics: {
-    mae: number
-    rmse: number
-    mape: number
-    baseline_mae: number
-    baseline_rmse: number
-    total_forecast: number
-    avg_forecast: number
-  }
-  model_info: {
-    name: string
-    features: string[]
-    total_observations: number
-    train_samples: number
-    val_samples: number
-    split_date?: string
-  }
-}
-
-export function getForecastOptions() {
-  return getJson<ForecastOptions>('/api/ml/forecast/options')
-}
-
-export function generateDatasetForecast(payload: {
-  target_column?: string
-  date_column?: string
-  periods?: number
-  grain?: string
-}) {
-  return postJson<DatasetForecastResult>('/api/ml/forecast/dataset', payload)
 }
 
 export interface MlCompatibility {
@@ -382,8 +360,8 @@ export type CustomerSegmentsResponse = MlNotApplicable | {
   dataset_id: string
 }
 
-export function getCustomerSegments() {
-  return getJson<CustomerSegmentsResponse>('/api/ml/segments/customers')
+export function getCustomerSegments(params: Record<string, string> = {}) {
+  return getJson<CustomerSegmentsResponse>(`/api/ml/segments/customers?${new URLSearchParams(modelParams(params))}`)
 }
 
 export type AnomaliesResponse = MlNotApplicable | {
@@ -395,8 +373,8 @@ export type AnomaliesResponse = MlNotApplicable | {
   dataset_id: string
 }
 
-export function getAnomalies() {
-  return getJson<AnomaliesResponse>('/api/ml/anomalies')
+export function getAnomalies(params: Record<string, string> = {}) {
+  return getJson<AnomaliesResponse>(`/api/ml/anomalies?${new URLSearchParams(modelParams(params))}`)
 }
 
 export interface SalesPredictInput {
@@ -408,9 +386,12 @@ export interface SalesPredictInput {
   product_category_name: string
 }
 
-export function predictSales(input: SalesPredictInput) {
-  return postJson<{ predicted_item_revenue: number; currency: string }>(
-    '/api/ml/predict/sales',
+export type SalesPredictionResponse = MlNotApplicable | {
+  status: 'available'; predicted_item_revenue: number; currency: string; dataset_id: string
+}
+export function predictSales(input: SalesPredictInput, params: Record<string, string> = {}) {
+  return postJson<SalesPredictionResponse>(
+    `/api/ml/predict/sales?${new URLSearchParams(modelParams(params))}`,
     input,
   )
 }
@@ -443,7 +424,7 @@ export interface ProductSegmentationResponse {
 }
 
 export function getProductSegments(params: Record<string, string> = {}) {
-  const qs = new URLSearchParams(params).toString()
+  const qs = new URLSearchParams(modelParams(params)).toString()
   return getJson<ProductSegmentationResponse>(
     `/api/ml/product-segmentation${qs ? `?${qs}` : ''}`
   )
@@ -457,54 +438,20 @@ export interface InsightsResponse {
   status: string
   provider: string | null
   role: string
-  dataset_id?: string | null
 }
 
 export function queryInsights(question: string, context_limit = 20, params: Record<string, string> = {}) {
   return postJson<InsightsResponse>(`/api/insights/query?${new URLSearchParams(params)}`, { question, context_limit })
 }
 
-export interface AutomatedInsight {
-  id?: string
-  type: string
-  title: string
-  finding: string
-  metric: string
-  confidence: 'High' | 'Medium' | 'Low'
-  basis?: string
-  time_period?: string
-  significance?: string
-  recommendation?: string
-}
-
-export interface AutomatedInsightsResponse {
-  dataset_id: string | null
-  dataset_name?: string
-  insights: AutomatedInsight[]
-}
-
-export function getAutomatedInsights(params: Record<string, string> = {}) {
-  const qs = new URLSearchParams(params).toString()
-  return getJson<AutomatedInsightsResponse>(`/api/analytics/automated-insights${qs ? `?${qs}` : ''}`)
-}
-
-export function getDatasetInsights(datasetId: string) {
-  return getJson<AutomatedInsightsResponse>(`/api/datasets/${encodeURIComponent(datasetId)}/insights`)
-}
-
-
 // ---- Reports ----
 
 export async function downloadReport(report: string, params: Record<string, string> = {}) {
-  const version = datasetVersion
-  const qs = new URLSearchParams({ report, ...params }).toString()
-  const r = await fetch(`${API_BASE}/api/reports/export?${qs}`, { headers: authHeaders() })
-  if (!r.ok) {
-    const error = await r.json().catch(() => null)
-    throw new Error(typeof error?.detail === 'string' ? error.detail : `Export failed: ${r.status}`)
-  }
+  const context = getRequestContext()
+  const qs = new URLSearchParams({ ...params, report }).toString()
+  const r = await requestResponse(`/api/reports/export?${qs}`, {}, true, context)
   const blob = await r.blob()
-  if (version !== datasetVersion) throw new Error('Dataset changed; export discarded.')
+  ensureContext(context, 'Dataset or session changed; export discarded.')
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

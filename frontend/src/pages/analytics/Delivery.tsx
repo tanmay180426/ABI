@@ -1,4 +1,6 @@
 import DatasetResults from '@/components/DatasetResults'
+import BusinessEvidence from '@/components/BusinessEvidence'
+import { useDataset } from '@/hooks/useDataset'
 import { useEffect, useState } from 'react'
 import {
   Line,
@@ -17,6 +19,7 @@ import { KpiCard } from '@/components/KpiCard'
 
 export default function Delivery() {
   const { filters } = useFilters()
+  const { active } = useDataset()
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -32,7 +35,7 @@ export default function Delivery() {
       })
       .catch(e => { if (current) { setError(e.message); setState('error') } })
     return () => { current = false }
-  }, [filters])
+  }, [filters, active?.dataset_id, active?.updated_at])
 
   if (state === 'error') {
     return (
@@ -55,10 +58,11 @@ export default function Delivery() {
     by_category,
   } = data
 
-  if ('metric_cards' in data) return <DatasetResults data={data} />
+  if ('metric_cards' in data) return <div className="space-y-6"><DatasetResults data={data} /><BusinessEvidence domain="sellers" /></div>
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <BusinessEvidence domain="sellers" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Avg Delivery" value={kpis.avg_delivery_days != null ? `${kpis.avg_delivery_days} days` : '—'} />
         <KpiCard label="Median Delivery" value={kpis.median_delivery_days != null ? `${kpis.median_delivery_days} days` : '—'} />
@@ -78,18 +82,18 @@ export default function Delivery() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Delivery Performance Over Time</h2>
           {over_time && over_time.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={over_time}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                <XAxis dataKey="period" stroke="#666" fontSize={11} />
-                <YAxis yAxisId="left" stroke="#666" fontSize={11} />
-                <YAxis yAxisId="right" orientation="right" stroke="#666" fontSize={11} />
-                <Tooltip contentStyle={{ background: '#171717', border: '1px solid #333' }} />
-                <Bar yAxisId="right" dataKey="orders" fill="#3b82f6" opacity={0.3} />
-                <Line yAxisId="left" type="monotone" dataKey="avg_delivery_days" name="Avg Days" stroke="#22c55e" strokeWidth={2} dot={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                <XAxis dataKey="period" stroke="rgb(var(--muted))" fontSize={11} />
+                <YAxis yAxisId="left" stroke="rgb(var(--muted))" fontSize={11} />
+                <YAxis yAxisId="right" orientation="right" stroke="rgb(var(--muted))" fontSize={11} />
+                <Tooltip contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }} />
+                <Bar yAxisId="right" dataKey="orders" fill="var(--chart-1)" opacity={0.3} />
+                <Line yAxisId="left" type="monotone" dataKey="avg_delivery_days" name="Avg Days" stroke="var(--chart-2)" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           ) : (
@@ -97,16 +101,16 @@ export default function Delivery() {
           )}
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Delivery Duration Distribution</h2>
           {duration_distribution && duration_distribution.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={duration_distribution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                <XAxis dataKey="bucket" stroke="#666" fontSize={11} />
-                <YAxis stroke="#666" fontSize={11} />
-                <Tooltip contentStyle={{ background: '#171717', border: '1px solid #333' }} />
-                <Bar dataKey="orders" fill="#f59e0b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                <XAxis dataKey="bucket" stroke="rgb(var(--muted))" fontSize={11} />
+                <YAxis stroke="rgb(var(--muted))" fontSize={11} />
+                <Tooltip contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }} />
+                <Bar dataKey="orders" fill="var(--chart-3)" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -116,7 +120,7 @@ export default function Delivery() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800 flex flex-col">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800 flex flex-col">
           <h2 className="mb-3 font-medium">Delivery by Customer State</h2>
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 max-h-[400px] custom-scrollbar">
             {by_state?.map((s: any) => (
@@ -137,7 +141,7 @@ export default function Delivery() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800 flex flex-col">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800 flex flex-col">
           <h2 className="mb-3 font-medium">Delivery by Category</h2>
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 max-h-[400px] custom-scrollbar">
             {by_category?.map((c: any) => (

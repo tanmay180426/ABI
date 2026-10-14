@@ -1,0 +1,6668 @@
+{
+  "counting": "One entry per explicit registered method/path; docs HEAD counted separately; CORS OPTIONS is middleware, not an endpoint.",
+  "counts": {
+    "total": 56,
+    "methods": {
+      "GET": 38,
+      "HEAD": 4,
+      "POST": 8,
+      "PATCH": 4,
+      "PUT": 1,
+      "DELETE": 1
+    },
+    "modules": {
+      "FastAPI documentation": 8,
+      "app.api.routes.dashboard": 4,
+      "app.api.routes.ml": 7,
+      "app.api.routes.insights": 2,
+      "app.api.routes.analytics": 8,
+      "app.api.routes.auth": 5,
+      "app.api.routes.users": 8,
+      "app.api.routes.reports": 1,
+      "app.api.routes.admin": 6,
+      "app.api.routes.datasets": 6,
+      "app.main": 1
+    },
+    "access": {
+      "public": 11,
+      "authenticated": 32,
+      "admin": 13
+    }
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/openapi.json",
+      "module": "FastAPI documentation",
+      "handler": "openapi",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "HEAD",
+      "path": "/openapi.json",
+      "module": "FastAPI documentation",
+      "handler": "openapi",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "GET",
+      "path": "/docs",
+      "module": "FastAPI documentation",
+      "handler": "swagger_ui_html",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "HEAD",
+      "path": "/docs",
+      "module": "FastAPI documentation",
+      "handler": "swagger_ui_html",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "GET",
+      "path": "/docs/oauth2-redirect",
+      "module": "FastAPI documentation",
+      "handler": "swagger_ui_redirect",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "HEAD",
+      "path": "/docs/oauth2-redirect",
+      "module": "FastAPI documentation",
+      "handler": "swagger_ui_redirect",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "GET",
+      "path": "/redoc",
+      "module": "FastAPI documentation",
+      "handler": "redoc_html",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "HEAD",
+      "path": "/redoc",
+      "module": "FastAPI documentation",
+      "handler": "redoc_html",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {},
+      "description": "Framework documentation/schema route (not a business API)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/kpis",
+      "module": "app.api.routes.dashboard",
+      "handler": "kpis",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "filters",
+        "kpis"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Return verified business KPIs computed from the selected dataset.\n\nValues come from real data via the ETL pipeline (see docs/KPIs.md).\nAccepts the shared analytics filter set (see docs/ANALYTICS.md).",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/monthly-revenue",
+      "module": "app.api.routes.dashboard",
+      "handler": "monthly_revenue",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 400,
+            "minimum": 1,
+            "default": 24,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "series"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Monthly Revenue",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/revenue-by-category",
+      "module": "app.api.routes.dashboard",
+      "handler": "revenue_by_category",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "maximum": 100,
+            "minimum": 1,
+            "default": 15,
+            "title": "Limit"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "series"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Revenue By Category",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/orders-by-status",
+      "module": "app.api.routes.dashboard",
+      "handler": "orders_by_status",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "series"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Orders By Status",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/ml/status",
+      "module": "app.api.routes.ml",
+      "handler": "ml_status",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "dataset_id",
+        "features"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Ml Status",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/ml/models/{name}",
+      "module": "app.api.routes.ml",
+      "handler": "ml_model_detail",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "name",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "compatibility"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "404",
+        "422"
+      ],
+      "description": "Ml Model Detail",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/ml/forecast",
+      "module": "app.api.routes.ml",
+      "handler": "ml_forecast",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "periods",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "integer",
+            "default": 30,
+            "title": "Periods"
+          }
+        },
+        {
+          "name": "target",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "orders",
+            "title": "Target"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "400",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Ml Forecast",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/ml/segments/customers",
+      "module": "app.api.routes.ml",
+      "handler": "ml_customer_segments",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Ml Customer Segments",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/ml/anomalies",
+      "module": "app.api.routes.ml",
+      "handler": "ml_anomalies",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Ml Anomalies",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/ml/predict/sales",
+      "module": "app.api.routes.ml",
+      "handler": "ml_predict_sales",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SalesPredictRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Ml Predict Sales",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/ml/product-segmentation",
+      "module": "app.api.routes.ml",
+      "handler": "ml_product_segmentation",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Ml Product Segmentation",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights/status",
+      "module": "app.api.routes.insights",
+      "handler": "insights_status",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Insights Status",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/insights/query",
+      "module": "app.api.routes.insights",
+      "handler": "insights_query",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/QueryRequest"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "answer",
+        "dataset_id",
+        "provider",
+        "role",
+        "sources",
+        "status"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Insights Query",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/filters",
+      "module": "app.api.routes.analytics",
+      "handler": "filter_options",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Distinct values for the shared filter bar (states, categories, ...).",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/overview",
+      "module": "app.api.routes.analytics",
+      "handler": "overview",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "grain",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Dashboard payload: KPIs, series and distributions in one request.",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/sales",
+      "module": "app.api.routes.analytics",
+      "handler": "sales",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "grain",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Sales",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/orders",
+      "module": "app.api.routes.analytics",
+      "handler": "orders",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "grain",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Orders",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/customers",
+      "module": "app.api.routes.analytics",
+      "handler": "customers",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Customers",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/products",
+      "module": "app.api.routes.analytics",
+      "handler": "products",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Products",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/sellers",
+      "module": "app.api.routes.analytics",
+      "handler": "sellers",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "grain",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grain"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Sellers",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/analytics/delivery",
+      "module": "app.api.routes.analytics",
+      "handler": "delivery",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Delivery",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "module": "app.api.routes.auth",
+      "handler": "login",
+      "classification": "public",
+      "dependencies": [
+        "OAuth2PasswordRequestForm"
+      ],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/Body_login_api_auth_login_post"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "422"
+      ],
+      "description": "Login",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/refresh",
+      "module": "app.api.routes.auth",
+      "handler": "refresh",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RefreshRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "access_token",
+        "token_type"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "422"
+      ],
+      "description": "Refresh",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "module": "app.api.routes.auth",
+      "handler": "me",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "user"
+      ],
+      "source_status_codes": [
+        "200",
+        "401"
+      ],
+      "description": "Me",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "module": "app.api.routes.auth",
+      "handler": "register",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RegisterRequest"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "user"
+      ],
+      "source_status_codes": [
+        "201",
+        "401",
+        "403",
+        "409",
+        "422"
+      ],
+      "description": "Register",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/admin/users",
+      "module": "app.api.routes.auth",
+      "handler": "admin_users",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "users"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "Admin Users",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me",
+      "module": "app.api.routes.users",
+      "handler": "read_me",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "user"
+      ],
+      "source_status_codes": [
+        "200",
+        "401"
+      ],
+      "description": "Read Me",
+      "response_model": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/users/me",
+      "module": "app.api.routes.users",
+      "handler": "update_me",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PasswordChange"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "status"
+      ],
+      "source_status_codes": [
+        "200",
+        "400",
+        "401",
+        "422"
+      ],
+      "description": "Update Me",
+      "response_model": null
+    },
+    {
+      "method": "PUT",
+      "path": "/api/users/me",
+      "module": "app.api.routes.users",
+      "handler": "replace_me",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PasswordChange"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "422"
+      ],
+      "description": "Replace Me",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/users",
+      "module": "app.api.routes.users",
+      "handler": "list_all",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "users"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "List All",
+      "response_model": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/users/{username}/role",
+      "module": "app.api.routes.users",
+      "handler": "set_role",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [
+        {
+          "name": "username",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Username"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RoleChange"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "user"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "404",
+        "409",
+        "422"
+      ],
+      "description": "Set Role",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/users",
+      "module": "app.api.routes.users",
+      "handler": "create_new_user",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CreateUser"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "user"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "409",
+        "422"
+      ],
+      "description": "Create New User",
+      "response_model": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/users/{username}/status",
+      "module": "app.api.routes.users",
+      "handler": "set_status",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [
+        {
+          "name": "username",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Username"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/UserStatus"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "user"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "404",
+        "409",
+        "422"
+      ],
+      "description": "Set Status",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/roles/metadata",
+      "module": "app.api.routes.users",
+      "handler": "list_roles",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "roles"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "List Roles",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/export",
+      "module": "app.api.routes.reports",
+      "handler": "export_report",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "analytics_filters",
+        "auth_gate",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "report",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "default": "kpis",
+            "title": "Report"
+          }
+        },
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "date_from",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date From"
+          }
+        },
+        {
+          "name": "date_to",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date To"
+          }
+        },
+        {
+          "name": "category",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        {
+          "name": "customer_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer State"
+          }
+        },
+        {
+          "name": "seller_state",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seller State"
+          }
+        },
+        {
+          "name": "order_status",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order Status"
+          }
+        },
+        {
+          "name": "payment_type",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Type"
+          }
+        },
+        {
+          "name": "review_score",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Score"
+          }
+        },
+        {
+          "name": "column_filters",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Column Filters"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Filtered CSV export scoped to the authorized selected dataset.",
+          "content": {
+            "text/csv": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "404",
+        "422"
+      ],
+      "description": "Export Report",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/system/status",
+      "module": "app.api.routes.admin",
+      "handler": "system_status",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user",
+        "require_admin"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "app",
+        "auth_required",
+        "database",
+        "env",
+        "platform",
+        "python",
+        "uptime_seconds",
+        "version"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "System Status",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/health",
+      "module": "app.api.routes.admin",
+      "handler": "health_status",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user",
+        "require_admin"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "authentication",
+        "backend",
+        "database",
+        "ml_models",
+        "warehouse"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "Real health checks for the administration UI.",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/data/etl/status",
+      "module": "app.api.routes.admin",
+      "handler": "etl_status",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user",
+        "require_admin"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "loaded",
+        "olist_dir",
+        "tables"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "Etl Status",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/warehouse/status",
+      "module": "app.api.routes.admin",
+      "handler": "warehouse_status",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_admin",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "complete",
+        "dataset_id",
+        "dialect",
+        "expected_tables",
+        "loaded_tables",
+        "max_date",
+        "min_date",
+        "schema_tables",
+        "source",
+        "total_rows",
+        "warehouse_tables"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Warehouse administration: schema presence, row counts and load state.",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/ml/status",
+      "module": "app.api.routes.admin",
+      "handler": "ml_admin_status",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "get_current_user",
+        "get_optional_user",
+        "require_admin"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "artifact_count",
+        "artifacts",
+        "data_dir_exists",
+        "features",
+        "metadata_entries",
+        "models_dir",
+        "retraining"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "ML administration: deployed artifacts and training state on disk.",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/settings",
+      "module": "app.api.routes.admin",
+      "handler": "system_settings",
+      "classification": "admin",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "checker('admin',)",
+        "dataset_context",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_admin",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "query",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          }
+        },
+        {
+          "name": "x-dataset-id",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "X-Dataset-Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "access_token_expire_minutes",
+        "app",
+        "auth_required",
+        "dataset",
+        "env",
+        "llm",
+        "refresh_token_expire_minutes",
+        "reports",
+        "roles",
+        "secrets_exposed",
+        "version"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Non-secret application settings. Secrets are never returned.",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/datasets",
+      "module": "app.api.routes.datasets",
+      "handler": "list_datasets",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "active_dataset_id",
+        "datasets"
+      ],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403"
+      ],
+      "description": "List Datasets",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/datasets/upload",
+      "module": "app.api.routes.datasets",
+      "handler": "upload",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [],
+      "requestBody": {
+        "content": {
+          "multipart/form-data": {
+            "schema": {
+              "$ref": "#/components/schemas/Body_upload_api_datasets_upload_post"
+            }
+          }
+        },
+        "required": true
+      },
+      "responses": {
+        "201": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "201",
+        "401",
+        "403",
+        "413",
+        "422"
+      ],
+      "description": "Upload",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/datasets/{dataset_id}",
+      "module": "app.api.routes.datasets",
+      "handler": "detail",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Dataset Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Detail",
+      "response_model": null
+    },
+    {
+      "method": "POST",
+      "path": "/api/datasets/{dataset_id}/select",
+      "module": "app.api.routes.datasets",
+      "handler": "select_dataset",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Dataset Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Select Dataset",
+      "response_model": null
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/datasets/{dataset_id}/schema",
+      "module": "app.api.routes.datasets",
+      "handler": "update_schema",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Dataset Id"
+          }
+        }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SchemaUpdate"
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "200",
+        "401",
+        "403",
+        "422"
+      ],
+      "description": "Update Schema",
+      "response_model": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/datasets/{dataset_id}",
+      "module": "app.api.routes.datasets",
+      "handler": "delete_dataset",
+      "classification": "authenticated",
+      "dependencies": [
+        "OAuth2PasswordBearer",
+        "auth_gate",
+        "get_current_user",
+        "get_db",
+        "get_optional_user",
+        "require_bi_user"
+      ],
+      "parameters": [
+        {
+          "name": "dataset_id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "title": "Dataset Id"
+          }
+        }
+      ],
+      "requestBody": null,
+      "responses": {
+        "204": {
+          "description": "Successful Response"
+        },
+        "422": {
+          "description": "Validation Error",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      },
+      "source_return_keys": [],
+      "source_status_codes": [
+        "204",
+        "401",
+        "403",
+        "409",
+        "422"
+      ],
+      "description": "Delete Dataset",
+      "response_model": null
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "module": "app.main",
+      "handler": "health",
+      "classification": "public",
+      "dependencies": [],
+      "parameters": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "description": "Successful Response",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        }
+      },
+      "source_return_keys": [
+        "status"
+      ],
+      "source_status_codes": [
+        "200"
+      ],
+      "description": "Health",
+      "response_model": null
+    }
+  ],
+  "schemas": {
+    "Body_login_api_auth_login_post": {
+      "properties": {
+        "grant_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "password"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Grant Type"
+        },
+        "username": {
+          "type": "string",
+          "title": "Username"
+        },
+        "password": {
+          "type": "string",
+          "title": "Password"
+        },
+        "scope": {
+          "type": "string",
+          "title": "Scope",
+          "default": ""
+        },
+        "client_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Client Id"
+        },
+        "client_secret": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Client Secret"
+        }
+      },
+      "type": "object",
+      "required": [
+        "username",
+        "password"
+      ],
+      "title": "Body_login_api_auth_login_post"
+    },
+    "Body_upload_api_datasets_upload_post": {
+      "properties": {
+        "file": {
+          "type": "string",
+          "format": "binary",
+          "title": "File"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name"
+        }
+      },
+      "type": "object",
+      "required": [
+        "file",
+        "name"
+      ],
+      "title": "Body_upload_api_datasets_upload_post"
+    },
+    "CreateUser": {
+      "properties": {
+        "username": {
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 3,
+          "title": "Username"
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 6,
+          "title": "Password"
+        },
+        "role": {
+          "type": "string",
+          "pattern": "^(analyst|admin)$",
+          "title": "Role"
+        }
+      },
+      "type": "object",
+      "required": [
+        "username",
+        "password",
+        "role"
+      ],
+      "title": "CreateUser"
+    },
+    "HTTPValidationError": {
+      "properties": {
+        "detail": {
+          "items": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "type": "array",
+          "title": "Detail"
+        }
+      },
+      "type": "object",
+      "title": "HTTPValidationError"
+    },
+    "PasswordChange": {
+      "properties": {
+        "current_password": {
+          "type": "string",
+          "title": "Current Password"
+        },
+        "new_password": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 6,
+          "title": "New Password"
+        }
+      },
+      "type": "object",
+      "required": [
+        "current_password",
+        "new_password"
+      ],
+      "title": "PasswordChange"
+    },
+    "QueryRequest": {
+      "properties": {
+        "question": {
+          "type": "string",
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Question"
+        },
+        "context_limit": {
+          "type": "integer",
+          "maximum": 50.0,
+          "minimum": 1.0,
+          "title": "Context Limit",
+          "default": 20
+        }
+      },
+      "type": "object",
+      "required": [
+        "question"
+      ],
+      "title": "QueryRequest"
+    },
+    "RefreshRequest": {
+      "properties": {
+        "refresh_token": {
+          "type": "string",
+          "title": "Refresh Token"
+        }
+      },
+      "type": "object",
+      "required": [
+        "refresh_token"
+      ],
+      "title": "RefreshRequest"
+    },
+    "RegisterRequest": {
+      "properties": {
+        "username": {
+          "type": "string",
+          "maxLength": 50,
+          "minLength": 3,
+          "title": "Username"
+        },
+        "password": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 6,
+          "title": "Password"
+        },
+        "role": {
+          "type": "string",
+          "pattern": "^(analyst|admin)$",
+          "title": "Role",
+          "default": "analyst"
+        }
+      },
+      "type": "object",
+      "required": [
+        "username",
+        "password"
+      ],
+      "title": "RegisterRequest"
+    },
+    "RoleChange": {
+      "properties": {
+        "role": {
+          "type": "string",
+          "pattern": "^(analyst|admin)$",
+          "title": "Role"
+        }
+      },
+      "type": "object",
+      "required": [
+        "role"
+      ],
+      "title": "RoleChange"
+    },
+    "SalesPredictRequest": {
+      "properties": {
+        "purchase_month": {
+          "type": "integer",
+          "maximum": 12.0,
+          "minimum": 1.0,
+          "title": "Purchase Month"
+        },
+        "purchase_weekday": {
+          "type": "integer",
+          "maximum": 6.0,
+          "minimum": 0.0,
+          "title": "Purchase Weekday"
+        },
+        "purchase_hour": {
+          "type": "integer",
+          "maximum": 23.0,
+          "minimum": 0.0,
+          "title": "Purchase Hour"
+        },
+        "n_items": {
+          "type": "integer",
+          "minimum": 1.0,
+          "title": "N Items"
+        },
+        "customer_state": {
+          "type": "string",
+          "title": "Customer State",
+          "default": "SP"
+        },
+        "product_category_name": {
+          "type": "string",
+          "title": "Product Category Name",
+          "default": "unknown"
+        }
+      },
+      "type": "object",
+      "required": [
+        "purchase_month",
+        "purchase_weekday",
+        "purchase_hour",
+        "n_items"
+      ],
+      "title": "SalesPredictRequest"
+    },
+    "SchemaUpdate": {
+      "properties": {
+        "fields": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "object",
+          "title": "Fields"
+        },
+        "currency_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "BRL",
+                "USD",
+                "INR",
+                "EUR",
+                "GBP"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currency Code"
+        },
+        "domain": {
+          "type": "string",
+          "enum": [
+            "general",
+            "commerce",
+            "transactions"
+          ],
+          "title": "Domain",
+          "default": "general"
+        },
+        "date_order": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "dayfirst",
+                "monthfirst"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Date Order"
+        }
+      },
+      "type": "object",
+      "title": "SchemaUpdate"
+    },
+    "UserStatus": {
+      "properties": {
+        "is_active": {
+          "type": "boolean",
+          "title": "Is Active"
+        }
+      },
+      "type": "object",
+      "required": [
+        "is_active"
+      ],
+      "title": "UserStatus"
+    },
+    "ValidationError": {
+      "properties": {
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "array",
+          "title": "Location"
+        },
+        "msg": {
+          "type": "string",
+          "title": "Message"
+        },
+        "type": {
+          "type": "string",
+          "title": "Error Type"
+        }
+      },
+      "type": "object",
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ],
+      "title": "ValidationError"
+    }
+  }
+}

@@ -37,7 +37,7 @@ def build_context(db: Session, role: str = "analyst", f: Filters | None = None) 
             {"name": f["name"], "status": f["status"]} for f in ml_service.feature_status()
         ],
     }
-    if ds.adapter == "tabular":
+    if ds.adapter == "tabular" and ds.source_type != 'bundle':
         from app.analytics.tabular import TabularSource
         source = TabularSource(db, f)
         context["schema"] = [{"name": c["name"], "dtype": c["dtype"], "role": c["role"]} for c in source.columns]
@@ -53,7 +53,7 @@ def grouped_answer(question, db, f):
     q = question.casefold()
     if re.search(r"\b(where|over|under)\b|[<>]", q):
         return f"Dataset: {ds.name}. I cannot calculate that condition. Use the available filters."
-    if ds.adapter != "tabular":
+    if ds.adapter != "tabular" or ds.source_type == 'bundle':
         if re.search(r"\brevenue\s+(?:by|per|for each)\s+(?:product\s+)?category\b", q):
             if re.search(r"\b(average|mean|median|rate|maximum|minimum)\b", q):
                 return f"Dataset: {ds.name}. I cannot calculate that grouped revenue metric."
@@ -144,7 +144,7 @@ def summarize(context: dict) -> str:
     k = context.get("kpis", {})
     lines = [
         f"Dataset: {context.get('dataset', 'Selected dataset')}.",
-        "LLM assistant is not configured; showing a deterministic summary of current data.",
+        "I cannot answer that question with the supported local calculations. Optional local language generation is unavailable; showing a deterministic summary of current data.",
         "",
         f"- Total orders: {k.get('total_orders'):,}" if k.get("total_orders") else "",
         f"- Total amount: {k.get('total_revenue'):,.2f}"

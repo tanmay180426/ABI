@@ -4,6 +4,7 @@ import io
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from starlette.background import BackgroundTask
 
 from app.analytics import metrics
 from app.analytics.filters import Filters, analytics_filters
@@ -24,23 +25,27 @@ REPORT_ACCESS = {
 }
 
 
+def _csv_value(value):
+    return "'"+value if isinstance(value,str) and value.lstrip().startswith(('=','+','-','@')) else value
+
+
 def _to_csv(rows: list[dict]) -> str:
     if not rows:
         return ""
     buf = io.StringIO()
     writer = csv.writer(buf)
     keys = list(rows[0].keys())
-    def safe(value):
-        return "'" + value if isinstance(value, str) and value.lstrip().startswith(("=", "+", "-", "@")) else value
     # Headers are also untrusted upload strings, not just cell values.
-    writer.writerow([safe(k) for k in keys])
-    writer.writerows([[safe(row.get(k)) for k in keys] for row in rows])
+    writer.writerow([_csv_value(k) for k in keys])
+    writer.writerows([[_csv_value(row.get(k)) for k in keys] for row in rows])
     return buf.getvalue()
 
 
 def _build_rows(report: str, db: Session, filters: Filters) -> list[dict]:
     ds = db.info.get("dataset")
     if report in {"dataset_rows", "numeric_statistics"}:
+        if ds and ds.source_type == 'bundle':
+            raise HTTPException(422,'Select an individual bundle table for raw-row or numeric-statistics export. Bundle KPI and chart exports use order-grain aggregates.')
         if not ds or ds.adapter != "tabular":
             raise HTTPException(422, "This export requires an uploaded tabular dataset.")
         from app.analytics.tabular import TabularSource
@@ -60,7 +65,10 @@ def _build_rows(report: str, db: Session, filters: Filters) -> list[dict]:
     raise HTTPException(status_code=404, detail=f"unknown report '{report}'")
 
 
-@router.get("/export")
+@router.get("/export", response_class=StreamingResponse, responses={
+    200: {"description": "Filtered CSV export scoped to the authorized selected dataset.",
+          "content": {"text/csv": {"schema": {"type": "string"}}}}
+})
 def export_report(
     report: str = Query("kpis"),
     f: Filters = Depends(analytics_filters),
@@ -74,6 +82,38 @@ def export_report(
         raise HTTPException(
             status_code=403, detail=f"Requires {REPORT_ACCESS[report]} role to export '{report}'"
         )
+
+    if report=='dataset_rows':
+        from app.services import datasets as dataset_service
+        from app.analytics.tabular import TabularSource
+        ds=db.info['dataset']
+        if ds.source_type=='bundle' or ds.adapter!='tabular':
+            raise HTTPException(422,'Select an individual uploaded table for raw-row export.')
+        # FastAPI 0.115 closes dependency sessions before streaming. Own the
+        # reader explicitly so large exports remain bounded and correctly scoped.
+        reader=Session(db.get_bind()); result=None;closed=False
+        try:
+            selected=dataset_service.authorized(reader,ds.id,user,ready=True)
+            reader.info['dataset']=selected;source=TabularSource(reader,f)
+            columns=source.columns
+            query=source.statement(*[source.by_name[c['name']] for c in columns]).order_by(source.table.c.row_id)
+            result=reader.execute(query.execution_options(stream_results=True,yield_per=1000))
+        except Exception:
+            reader.close();raise
+        def cleanup():
+            nonlocal closed
+            if not closed:
+                closed=True;result.close();reader.close()
+        def chunks():
+            try:
+                buf=io.StringIO();writer=csv.writer(buf)
+                writer.writerow([_csv_value(c['name']) for c in columns]);yield buf.getvalue();buf.seek(0);buf.truncate(0)
+                for batch in result.partitions(1000):
+                    writer.writerows([[_csv_value(v) for v in row] for row in batch])
+                    yield buf.getvalue();buf.seek(0);buf.truncate(0)
+            finally:cleanup()
+        return StreamingResponse(chunks(),media_type='text/csv',background=BackgroundTask(cleanup),
+            headers={'Content-Disposition':'attachment; filename="dataset_rows.csv"','X-Dataset-ID':ds.id})
 
     rows = _build_rows(report, db, f)
     csv_text = _to_csv(rows)

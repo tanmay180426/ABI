@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import AccessDenied from '@/components/AccessDenied'
+import { useSession } from '@/hooks/useSession'
 import { getMe } from '@/services/api'
 import { getToken, getStoredUser, isAuthRequired, setStoredUser } from '@/services/auth'
 
@@ -24,6 +25,7 @@ function statusOf(err: unknown): number {
  *   stays hidden behind a retryable error instead of trusting localStorage
  */
 export default function RequireAdmin() {
+  useSession()
   const location = useLocation()
   const [state, setState] = useState<State>('checking')
   const [attempt, setAttempt] = useState(0)

@@ -16,7 +16,7 @@ export default function AdminWarehouse() {
 
   return (
     <div className="space-y-4">
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-medium">Warehouse</h2>
           <span
@@ -89,7 +89,7 @@ export default function AdminWarehouse() {
         </table>
       </div>
 
-      <div className="bg-neutral-900/60 border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
+      <div className="abi-panel border border-neutral-800 rounded-lg p-4 text-sm text-neutral-500">
         Schema objects: {wh.schema_tables.join(', ') || 'none'}
         <div className="mt-1">Reference warehouse source: {wh.source}</div>
       </div>

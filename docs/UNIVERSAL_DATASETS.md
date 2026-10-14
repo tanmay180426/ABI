@@ -9,6 +9,96 @@ dataset to see its fields, types, confidence, missing values, duplicates and
 capabilities. Select a READY dataset in the header or manager. The active dataset
 name remains visible on every application page.
 
+### Folder and ZIP bundles
+
+Use **Upload Folder** in Chromium/Edge to select an actual directory (including
+nested folders), or **Upload ZIP** if directory selection is unavailable. Folder
+and ZIP bundles support CSV only; the separate Upload File workflow retains
+CSV/XLSX/XLS/flat JSON support. Review the bundle name, file manifest, counts and
+sizes, then choose **Confirm bundle import**. ZIP contents receive a server-side
+manifest preflight before import. OS noise is ignored; other unsupported files
+are rejected, not silently dropped.
+
+One bundle groups independently stored tables. Inspect the bundle, choose
+**Inspect table** for the first 20 rows, columns, quality and semantic mappings,
+then confirm each table's schema as needed. Select the bundle and use
+**Active Table** to choose the source for Dashboard, Analytics, numerical Insights
+and CSV reports. Table IDs are distinct from the parent bundle ID. Switching
+tables clears active filters and stale responses. Delete requires confirmation
+and removes the whole bundle and its tables under the existing owner policy;
+Admin privileges do not grant access to another user's uploads.
+
+Imports are atomic: every file must validate and storage must succeed before
+any READY bundle is committed. A failure leaves no partially imported bundle;
+correct the reported files and retry. The UI reports validation/processing
+stages, not an invented upload percentage. Duplicate relative paths are rejected;
+duplicate basenames in different subfolders retain separate UUID tables.
+
+Incoming payload is limited to **200 MiB (209,715,200 bytes)** for single-file,
+folder aggregate and compressed ZIP uploads. ZIP expansion has a separate
+**512 MiB** budget. Bundles allow 5,000,000 rows / 40,000,000 cells in total,
+1,500,000 rows / 12,000,000 cells per table, 100 columns per table and 900 seconds.
+Single-file row/cell/time limits stay 100,000 / 2,000,000 / 60 seconds.
+The separate XLSX expansion limit remains 200 MiB; raising the payload cap does
+not multiply spreadsheet decompression budgets. Multipart reception is bounded
+before framework spooling to the payload cap plus 1 MiB for framing, with one
+receiver at a time and 429 while another import is processing.
+There are 32 CSVs, 64 ZIP entries and a maximum per-member compression ratio of
+100:1. Each safety budget has a distinct error. The authenticated
+`GET /api/datasets/upload-limits` reports the current configured values.
+UTF-8/BOM and existing CSV delimiter handling are retained. Empty/malformed CSVs,
+duplicate headers, invalid paths, symlinks, nested archives, special files,
+encrypted/corrupt ZIPs and oversized collections are rejected. ZIPs are read in
+bounded memory without filesystem extraction.
+
+Recognized Olist schemas support a bundle overview when order IDs are unique,
+non-null and purchase timestamps validated. Dimension keys are checked over the
+complete table for uniqueness, compatible types, nulls and unmatched records.
+Items and payments are aggregated independently; they are never joined to each
+other before aggregation. Totals use their native fact grain and RFM uses item
+prices aggregated to order grain.
+Item revenue is sum(price), excluding freight, and is never added to payments.
+Category/seller filters restrict eligible items and orders; average order value
+is qualifying item revenue / matching distinct orders. Date/status/customer
+filters restrict orders. Payment/review filters use existence tests to select
+orders; payment and review summaries then cover all facts for those orders. Duplicate
+dimension keys disable their joins/filters. Repeated geolocation prefixes are
+disclosed and never directly joined. Generic schemas retain table-specific BI.
+
+After import choose **Open bundle Dashboard**; **Active Table** switches between
+overview and individual tables. KPIs, trends, category/status summaries, review
+scores, delivery days, numerical Insights and aggregate exports share filters.
+Select a table for raw-row export. Confirm currency/domain before monetary ML.
+Unknown currency and real/synthetic provenance are never inferred from filenames.
+
+The supplied ZIP measures 116,170,358 compressed / 291,450,197 expanded bytes,
+9 CSVs, 3,028,547 parsed rows and 18,065,201 cells. It fits the bundle budgets.
+See OLIST_IMPLEMENTATION_REPORT.md for verification and model evidence.
+
+Uploads at least 2 MiB return an owner-scoped 202 job. One bundle import runs at
+a time; concurrent requests receive 429. The UI polls actual stages, current
+table, completed-table and stored-row counts, and remembers the job ID to resume
+after navigation/reload. Cancellation/deadline failure rolls back all tables.
+Status expires one hour after completion. API restart loses in-memory job status;
+check the persisted bundle list before retrying. Run one API worker locally.
+Sources are spooled to a server-created temporary directory. Only one CSV's
+bounded source/profile frame is materialized at a time; inserts use 5,000-row
+batches. Temporary sources are cleaned on completion/failure. SQLite WAL allows
+auth/status readers during imports; explicit transactions also cover table DDL.
+
+The Dashboard shows dataset/bundle/table context, shared filter summary/reset,
+observed capability-aware metrics, current-filter trends/distributions and
+whole-table profile quality labelled separately. Unknown currency stays unknown;
+no conversion or fabricated growth is applied. No matching rows, missing
+capabilities, loading and retryable errors have explicit states. Uploads,
+analytics, Insights and exports remain local and require no paid API or LLM.
+
+Bundle APIs: `POST /api/datasets/bundles/upload` (multipart files + paths + name),
+`POST /api/datasets/bundles/zip-preview`, `POST /api/datasets/bundles/zip`, existing
+detail/select/schema/delete routes and `GET /api/datasets/{table_id}/preview`.
+The additive `app_dataset_bundle_table` catalog is created check-first; no
+existing dataset columns or database rebuild are required.
+
 Uploads do not automatically merge with other datasets or replace the selected
 dataset. Every upload receives a UUID. A failed dataset can be inspected/deleted
 but cannot be selected. Owners may delete their own uploads. The registered
@@ -39,7 +129,8 @@ wrappers, routes, reports and AI tools call that shared layer.
 ## Ingestion and lifecycle
 
 The authenticated upload handler bounds source bytes before parsing. Defaults:
-20 MiB source, 100,000 rows, 100 columns, 2,000,000 cells, 60 seconds processing.
+200 MiB payload, 100,000 rows, 100 columns, 2,000,000 cells and 60 seconds for
+single-file processing. Folder/ZIP processing uses the separate bundle budgets.
 These limits are configurable with the DATASET_* settings in `.env.example`.
 Inserts use batches of 1,000 rows. Appropriate date/entity/category columns receive
 indexes. Expanded XLSX data is bounded; macros and external spreadsheet links
@@ -54,9 +145,9 @@ columns. Raw source bytes never appear in public responses or the LLM context.
 Parsing failures retain a FAILED record and remove partial storage. Errors from
 database/reader internals are replaced with safe messages.
 
-The bounded upload is processed synchronously. PROCESSING is persisted before
-work begins; the upload UI reports progress while it awaits completion. A job
-queue, automatic retry and distributed processing are not introduced.
+Single-file and small-bundle uploads remain synchronous. Large folder/ZIP
+imports use the status job above. Failed bundles never become READY; uploads
+never train models. Distributed processing and automatic retries are not used.
 
 ## Schema intelligence
 

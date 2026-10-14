@@ -59,10 +59,14 @@ export const router = createBrowserRouter([
             path: '/ml',
             lazy: async () => ({ Component: (await import('@/pages/ml/MlLayout')).default }),
             children: [
-              { path: '', element: <FilterRedirect to="revenue-forecast" /> },
-              { path: 'revenue-forecast', lazy: async () => ({ Component: (await import('@/pages/ml/RevenueForecast')).default }) },
-              { path: 'product-segmentation', lazy: async () => ({ Component: (await import('@/pages/ml/ProductSegmentation')).default }) },
+              { path: '', element: <FilterRedirect to="metrics" /> },
               { path: 'metrics', lazy: async () => ({ Component: (await import('@/pages/ml/MlMetrics')).default }) },
+              { path: 'product-segmentation', lazy: async () => ({ Component: (await import('@/pages/ml/ProductSegmentation')).default }) },
+              { path: 'revenue-forecast', lazy: async () => ({ Component: (await import('@/pages/ml/RevenueForecast')).default }) },
+              { path: 'order-forecast', lazy: async () => ({ Component: (await import('@/pages/ml/RevenueForecast')).OrderForecast }) },
+              { path: 'customer-segments', lazy: async () => ({ Component: (await import('@/pages/ml/MlAnalysis')).CustomerSegments }) },
+              { path: 'anomalies', lazy: async () => ({ Component: (await import('@/pages/ml/MlAnalysis')).Anomalies }) },
+              { path: 'sales-prediction', lazy: async () => ({ Component: (await import('@/pages/ml/MlAnalysis')).SalesPrediction }) },
             ],
           },
           {

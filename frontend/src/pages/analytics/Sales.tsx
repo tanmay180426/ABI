@@ -1,4 +1,5 @@
 import DatasetResults from '@/components/DatasetResults'
+import SeasonalityHeatmap from '@/components/SeasonalityHeatmap'
 import { useEffect, useState } from 'react'
 import {
   LineChart,
@@ -47,12 +48,13 @@ export default function Sales() {
     return <div className="text-neutral-400">Loading sales data...</div>
   }
 
-  if ('metric_cards' in data) return <DatasetResults data={data} />
+  if ('metric_cards' in data) return <div className="space-y-6"><DatasetResults data={data} /><SeasonalityHeatmap points={data.time_series || []} grain={filters.grain || 'month'} currency={data.currency_code} /></div>
 
   const { kpis, revenue_series, top_categories, revenue_by_customer_state, top_products, top_sellers } = data
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <SeasonalityHeatmap points={revenue_series || []} grain={filters.grain || 'month'} currency="BRL" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Total Revenue" value={fmtMoney(kpis.total_revenue)} />
         <KpiCard label="Total Orders" value={kpis.total_orders.toLocaleString()} />
@@ -61,19 +63,19 @@ export default function Sales() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Revenue Over Time</h2>
           {revenue_series && revenue_series.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={revenue_series}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                <XAxis dataKey="period" stroke="#666" fontSize={11} />
-                <YAxis stroke="#666" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                <XAxis dataKey="period" stroke="rgb(var(--muted))" fontSize={11} />
+                <YAxis stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                 <Tooltip
                   formatter={(v: number) => fmtMoney(v)}
-                  contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                  contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--chart-1)" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -81,19 +83,19 @@ export default function Sales() {
           )}
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top Categories by Revenue</h2>
           {top_categories && top_categories.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={top_categories} layout="vertical" margin={{ left: 80 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" horizontal={false} />
-                <XAxis type="number" stroke="#666" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <YAxis type="category" dataKey="category" stroke="#666" fontSize={10} width={80} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" horizontal={false} />
+                <XAxis type="number" stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <YAxis type="category" dataKey="category" stroke="rgb(var(--muted))" fontSize={10} width={80} />
                 <Tooltip
                   formatter={(v: number) => fmtMoney(v)}
-                  contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                  contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                 />
-                <Bar dataKey="revenue" fill="#22c55e" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" fill="var(--chart-2)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -103,7 +105,7 @@ export default function Sales() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top Products</h2>
           <div className="space-y-3">
             {top_products?.slice(0, 5).map((p: any) => (
@@ -120,7 +122,7 @@ export default function Sales() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top Sellers</h2>
           <div className="space-y-3">
             {top_sellers?.slice(0, 5).map((s: any) => (
@@ -137,7 +139,7 @@ export default function Sales() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Revenue by Customer State</h2>
           <div className="space-y-3">
             {revenue_by_customer_state?.slice(0, 5).map((s: any) => (

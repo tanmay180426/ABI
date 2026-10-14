@@ -22,226 +22,15 @@ from fastapi import HTTPException
 from sqlalchemy import Column, Float, Integer, MetaData, String, Table, Text, func, inspect, select
 from sqlalchemy.orm import Session
 
-from app.models.dataset import AnalyticalSourceSelection, Dataset, DatasetSelection
+from app.models.dataset import Dataset, DatasetSelection, DatasetBundleTable
 from app.core.config import settings
 
 MAX_BYTES = settings.DATASET_MAX_BYTES
-MAX_ZIP_BYTES = settings.DATASET_MAX_ZIP_BYTES
 MAX_ROWS = settings.DATASET_MAX_ROWS
 MAX_COLUMNS = settings.DATASET_MAX_COLUMNS
-MAX_SECONDS = int(os.getenv("DATASET_MAX_SECONDS", 300))
+MAX_SECONDS = settings.DATASET_MAX_SECONDS
 MAX_CELLS = settings.DATASET_MAX_CELLS
-MAX_BATCH_FILES = settings.DATASET_MAX_BATCH_FILES
-MAX_BATCH_BYTES = settings.DATASET_MAX_BATCH_BYTES
-MAX_EXTRACTED_BYTES = settings.DATASET_MAX_EXTRACTED_BYTES
-MAX_EXTRACTED_FILES = settings.DATASET_MAX_EXTRACTED_FILES
-MAX_ZIP_DEPTH = settings.DATASET_MAX_ZIP_DEPTH
-MAX_COMPRESSION_RATIO = settings.DATASET_MAX_COMPRESSION_RATIO
 REFERENCE_ID = "00000000-0000-0000-0000-000000000001"
-
-EXECUTABLE_EXTENSIONS = {
-    ".exe", ".dll", ".so", ".dylib", ".bat", ".cmd", ".sh", ".ps1",
-    ".vbs", ".js", ".mjs", ".jar", ".com", ".scr", ".msi", ".bin",
-    ".py", ".elf", ".app", ".reg", ".wsf", ".cpl"
-}
-
-
-def unique_dataset_name(db: Session, owner: str, base_name: str, existing_in_batch: set[str] | None = None) -> str:
-    """Ensure dataset name is unique for the user and within the current upload batch."""
-    from sqlalchemy import select
-    ensure_registry(db)
-    clean_base = re.sub(r"\s+", " ", str(base_name)).strip()[:110] or "Dataset"
-    existing_db = set(db.scalars(select(Dataset.name).where(Dataset.owner == owner)).all())
-    if existing_in_batch:
-        existing_db.update(existing_in_batch)
-    if clean_base not in existing_db:
-        return clean_base
-    counter = 1
-    while f"{clean_base} ({counter})" in existing_db:
-        counter += 1
-    return f"{clean_base} ({counter})"
-
-
-def inspect_and_extract_zip(raw_zip: bytes) -> list[tuple[str, bytes, str]]:
-    """
-    Safely inspect and extract a ZIP archive in-memory.
-    Enforces:
-    - Path traversal rejection ('..', absolute paths, rooted paths, null bytes)
-    - Executable rejection across all archive entries
-    - Size and zip-bomb protection (uncompressed total size limit and ratio checks)
-    - File count limits
-    - Filters to supported data types (.csv, .xlsx, .xls, .json)
-    - Skips macOS __MACOSX / ._ files and hidden metadata (.DS_Store)
-    Returns list of (clean_dataset_name, file_bytes, suffix).
-    """
-    if len(raw_zip) > MAX_ZIP_BYTES:
-        raise HTTPException(413, f"ZIP file exceeds the {MAX_ZIP_BYTES // (1024 * 1024)} MB limit.")
-
-    try:
-        archive = zipfile.ZipFile(io.BytesIO(raw_zip))
-    except (zipfile.BadZipFile, Exception):
-        raise HTTPException(422, "Invalid or corrupted ZIP archive.")
-
-    infolist = archive.infolist()
-    if not infolist:
-        raise HTTPException(422, "The ZIP archive is empty.")
-
-    total_uncompressed = sum(info.file_size for info in infolist)
-    if total_uncompressed > MAX_EXTRACTED_BYTES:
-        raise HTTPException(413, f"ZIP uncompressed content exceeds the safety limit of {MAX_EXTRACTED_BYTES // (1024 * 1024)} MB.")
-
-    # Zip bomb ratio protection
-    if len(raw_zip) > 0 and (total_uncompressed / max(1, len(raw_zip))) > MAX_COMPRESSION_RATIO:
-        raise HTTPException(413, "ZIP compression ratio exceeds safety limits (possible zip bomb).")
-
-    extracted_files: list[tuple[str, bytes, str]] = []
-    supported_extensions = {".csv", ".xlsx", ".xls", ".json"}
-
-    for info in infolist:
-        filename = info.filename
-        # Path traversal checks
-        if ".." in filename or filename.startswith("/") or filename.startswith("\\") or ":" in filename or "\x00" in filename:
-            raise HTTPException(422, f"Path traversal detected in ZIP entry: {filename}")
-
-        # Check for symbolic links (POSIX S_IFLNK)
-        if (info.external_attr >> 16) & 0o170000 == 0o120000:
-            raise HTTPException(422, f"Symbolic links are not permitted in ZIP archive: {filename}")
-
-        # Check nesting depth
-        clean_entry = filename.replace("\\", "/").strip("/")
-        if clean_entry.count("/") > MAX_ZIP_DEPTH:
-            raise HTTPException(422, f"ZIP entry exceeds maximum allowed folder nesting depth of {MAX_ZIP_DEPTH}: {filename}")
-
-        # Check for executables
-        ext = Path(filename).suffix.lower()
-        if ext in EXECUTABLE_EXTENSIONS:
-            raise HTTPException(422, f"Executable files are not permitted in ZIP archive: {filename}")
-
-        # Skip directories and macOS hidden resource forks
-        if info.is_dir() or "__MACOSX" in filename or Path(filename).name.startswith("._") or Path(filename).name == ".DS_Store":
-            continue
-
-        if ext in supported_extensions:
-            if info.file_size > MAX_BYTES:
-                raise HTTPException(413, f"File {Path(filename).name} in ZIP exceeds {MAX_BYTES // (1024 * 1024)} MB limit.")
-            file_data = archive.read(info)
-            stem = Path(filename).stem.strip() or "Dataset"
-            extracted_files.append((stem, file_data, ext))
-
-    if not extracted_files:
-        raise HTTPException(422, "No supported data files (.csv, .xlsx, .xls, .json) found in ZIP archive.")
-
-    if len(extracted_files) > MAX_EXTRACTED_FILES:
-        raise HTTPException(422, f"ZIP archive contains {len(extracted_files)} data files, exceeding the {MAX_EXTRACTED_FILES} files limit.")
-
-    return extracted_files
-
-
-def ingest_zip_archive_file(archive_path: Path, db: Session, user: dict, archive_name: str) -> dict:
-    """Safely stream and process all supported files in a ZIP archive from disk."""
-    stat = archive_path.stat()
-    if stat.st_size > MAX_ZIP_BYTES:
-        raise HTTPException(413, f"ZIP file exceeds upload size limit ({MAX_ZIP_BYTES // (1024 * 1024)} MB).")
-
-    try:
-        archive = zipfile.ZipFile(archive_path, "r")
-    except (zipfile.BadZipFile, Exception):
-        raise HTTPException(422, "Invalid or corrupted ZIP archive.")
-
-    with archive:
-        infolist = archive.infolist()
-        if not infolist:
-            raise HTTPException(422, "The ZIP archive is empty.")
-
-        if len(infolist) > MAX_EXTRACTED_FILES:
-            raise HTTPException(413, f"ZIP archive contains {len(infolist)} files, exceeding the {MAX_EXTRACTED_FILES} files limit.")
-
-        total_uncompressed = sum(info.file_size for info in infolist)
-        if total_uncompressed > MAX_EXTRACTED_BYTES:
-            raise HTTPException(413, f"ZIP uncompressed content ({total_uncompressed // (1024 * 1024)} MB) exceeds the safety limit of {MAX_EXTRACTED_BYTES // (1024 * 1024)} MB.")
-
-        if stat.st_size > 0 and (total_uncompressed / max(1, stat.st_size)) > MAX_COMPRESSION_RATIO:
-            raise HTTPException(413, "ZIP compression ratio exceeds safety limits (possible zip bomb).")
-
-        supported_extensions = {".csv", ".xlsx", ".xls", ".json"}
-        for info in infolist:
-            filename = info.filename
-            if ".." in filename or filename.startswith("/") or filename.startswith("\\") or ":" in filename or "\x00" in filename:
-                raise HTTPException(422, f"Path traversal detected in ZIP entry: {filename}")
-            # Check for symbolic links (POSIX S_IFLNK)
-            if (info.external_attr >> 16) & 0o170000 == 0o120000:
-                raise HTTPException(422, f"Symbolic links are not permitted in ZIP archive: {filename}")
-            # Check nesting depth
-            clean_entry = filename.replace("\\", "/").strip("/")
-            if clean_entry.count("/") > MAX_ZIP_DEPTH:
-                raise HTTPException(422, f"ZIP entry exceeds maximum allowed folder nesting depth of {MAX_ZIP_DEPTH}: {filename}")
-            ext = Path(filename).suffix.lower()
-            if ext in EXECUTABLE_EXTENSIONS:
-                raise HTTPException(422, f"Executable files are not permitted in ZIP archive: {filename}")
-            if info.flag_bits & 0x1:
-                raise HTTPException(422, f"Encrypted or password-protected entries are not supported: {filename}")
-
-        successful_datasets = []
-        collection_id = str(uuid.uuid4())
-        errors = []
-        skipped_files = []
-        used_names: set[str] = set()
-
-        supported_entries = [
-            info for info in infolist
-            if not info.is_dir()
-            and "__MACOSX" not in info.filename
-            and not Path(info.filename).name.startswith("._")
-            and Path(info.filename).name != ".DS_Store"
-            and Path(info.filename).suffix.lower() in supported_extensions
-        ]
-
-        if not supported_entries:
-            raise HTTPException(422, "No supported data files (.csv, .xlsx, .xls, .json) found in ZIP archive.")
-
-        for info in infolist:
-            if info.is_dir() or "__MACOSX" in info.filename or Path(info.filename).name.startswith("._") or Path(info.filename).name == ".DS_Store":
-                continue
-
-            ext = Path(info.filename).suffix.lower()
-            if ext not in supported_extensions:
-                skipped_files.append({"path": info.filename, "reason": f"Unsupported format ({ext or 'no extension'})"})
-                continue
-
-            if info.file_size > MAX_BYTES:
-                errors.append({"path": info.filename, "error": f"Extracted file exceeds {MAX_BYTES // (1024 * 1024)} MB limit."})
-                continue
-
-            stem = Path(info.filename).stem.strip() or "Dataset"
-            try:
-                unique_name = unique_dataset_name(db, user["username"], stem, used_names)
-                used_names.add(unique_name)
-                file_bytes = archive.read(info)
-                ds = ingest(db, user, unique_name, file_bytes, ext, provenance={
-                    "source_mode": "ZIP_COLLECTION", "collection_id": collection_id,
-                    "collection_name": archive_name, "archive": archive_name,
-                    "relative_path": info.filename,
-                })
-                if ds.status == "FAILED":
-                    errors.append({"path": info.filename, "error": ds.error or "Dataset processing failed."})
-                else:
-                    successful_datasets.append(public(ds))
-            except Exception as e:
-                errors.append({"path": info.filename, "error": str(e)})
-
-        return {
-            "archive_name": archive_name,
-            "collection_id": collection_id,
-            "archive_size": stat.st_size,
-            "files_discovered": len(infolist),
-            "supported_files": len(supported_entries),
-            "successful": len(successful_datasets),
-            "failed": len(errors),
-            "skipped": len(skipped_files),
-            "skipped_files": skipped_files,
-            "datasets": successful_datasets,
-            "errors": errors,
-        }
 
 # Deliberately conservative: ambiguous 'amount' is currency, not revenue;
 # arbitrary identifiers and numeric fields never become customers or sales.
@@ -286,7 +75,7 @@ def ensure_registry(db: Session):
     bind = db.get_bind()
     Dataset.__table__.create(bind, checkfirst=True)
     DatasetSelection.__table__.create(bind, checkfirst=True)
-    AnalyticalSourceSelection.__table__.create(bind, checkfirst=True)
+    DatasetBundleTable.__table__.create(bind, checkfirst=True)
     if not db.get(Dataset, REFERENCE_ID) and "fact_orders" in inspect(bind).get_table_names():
         from sqlalchemy import text
         n = db.scalar(text("SELECT COUNT(*) FROM fact_orders"))
@@ -317,7 +106,6 @@ def public(ds):
                 {k: v for k, v in column.items() if k != "storage"}
                 for column in ds.profile.get("columns", [])]}, "semantics": ds.semantics,
             "capabilities": ds.capabilities, "quality": ds.quality, "error": ds.error,
-            "provenance": ds.profile.get("provenance", {}),
             "read_only": ds.owner is None}
     # Older metadata may predate finite-statistic validation. Unknown values
     # remain unavailable rather than becoming fabricated zeroes.
@@ -344,42 +132,9 @@ def authorized(db, dataset_id, user, ready=False):
     return ds
 
 
-def collection_members(db, collection_id, user, ready=True):
-    """Resolve a collection by its persisted opaque ID and enforce owner scope."""
-    ensure_registry(db)
-    members = db.scalars(select(Dataset).where(
-        Dataset.owner == user["username"],
-    ).order_by(Dataset.created_at, Dataset.id)).all()
-    members = [d for d in members if (d.profile or {}).get("provenance", {}).get("collection_id") == collection_id]
-    if not members:
-        raise HTTPException(404, "Collection not found.")
-    if ready and any(d.status != "READY" for d in members):
-        raise HTTPException(409, "Collection processing is incomplete. Review its file-level status before analysis.")
-    return members
-
-
-def resolve_collection(db, user, collection_id):
-    members = collection_members(db, collection_id, user)
-    db.info["source_mode"] = (members[0].profile or {}).get("provenance", {}).get("source_mode", "ZIP_COLLECTION")
-    db.info["collection_id"] = collection_id
-    db.info["collection_datasets"] = members
-    # Kept only as an explicit compatibility handle for endpoints that have not
-    # yet migrated to collection metrics; these callers must not silently run.
-    return members
-
-
 def resolve(db, user, requested=None):
     ensure_registry(db)
     selection = db.get(DatasetSelection, user["username"])
-    source_selection = db.get(AnalyticalSourceSelection, user["username"])
-    if requested is None and source_selection and source_selection.source_mode in {"ZIP_COLLECTION", "FOLDER_COLLECTION"}:
-        members = resolve_collection(db, user, source_selection.source_id)
-        ds = members[0]
-        db.info["dataset"] = ds
-        return ds
-    db.info["source_mode"] = "INDIVIDUAL_FILE"
-    db.info.pop("collection_id", None)
-    db.info.pop("collection_datasets", None)
     dataset_id = requested or (selection.dataset_id if selection else None)
     if not dataset_id:
         # Migration initializes existing users to the registered reference once.
@@ -392,6 +147,8 @@ def resolve(db, user, requested=None):
         else:
             raise HTTPException(409, "Select a ready dataset in Dataset Manager.")
     ds = authorized(db, dataset_id, user, ready=True)
+    if ds.source_type == "bundle" and not ds.profile.get('relational_analysis',{}).get('supported'):
+        raise HTTPException(409, "Select a table inside this bundle to analyze. Cross-table analytics are not supported.")
     db.info["dataset"] = ds
     return ds
 
@@ -426,11 +183,14 @@ def _headers(values):
     return names
 
 
-def parse_source(raw, suffix):
+def parse_source(raw, suffix, *, max_rows=None, max_cells=None, max_bytes=None, check=None):
+    max_rows = MAX_ROWS if max_rows is None else max_rows
+    max_cells = MAX_CELLS if max_cells is None else max_cells
+    max_bytes = MAX_BYTES if max_bytes is None else max_bytes
     if not raw:
         raise ValueError("The uploaded file is empty.")
-    if len(raw) > MAX_BYTES:
-        raise ValueError(f"File exceeds the {MAX_BYTES // 1024 // 1024} MB limit.")
+    if len(raw) > max_bytes:
+        raise ValueError(f"File contains {len(raw)} bytes; limit is {max_bytes} bytes.")
     if suffix == ".csv":
         try:
             content = raw.decode("utf-8-sig")
@@ -439,33 +199,29 @@ def parse_source(raw, suffix):
         if "\x00" in content:
             raise ValueError("CSV contains invalid binary content.")
         try:
-            sample = content[:16384]
-            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+            # Free-text reviews are not evidence of delimiter/escaping rules.
+            # Infer only the header delimiter; standard CSV doubled quotes must
+            # work even when no escaped quote occurs in the sniffing sample.
+            end = content.find('\n')
+            header = content[:end if end >= 0 else len(content)].rstrip('\r')
+            dialect = csv.Sniffer().sniff(header, delimiters=",;\t|")
         except csv.Error:
             dialect = csv.excel
-        # Ensure standard doublequote and quotechar handling
-        reader = csv.reader(
-            io.StringIO(content),
-            dialect=dialect,
-            doublequote=True,
-            escapechar="\\",
-            skipinitialspace=True,
-        )
+        reader = csv.reader(io.StringIO(content, newline=''), dialect, quotechar='"', doublequote=True, strict=True)
         names = _headers(next(reader, []))
         rows = []
-        malformed_count = 0
-        for line_no, row in enumerate(reader, start=2):
+        for row in reader:
             if not row:
                 continue
             if len(row) != len(names):
-                malformed_count += 1
-                # If a single row is genuinely malformed, raise precise diagnostic or skip if empty padding
-                raise ValueError(f"CSV row {line_no} has {len(row)} fields; expected {len(names)} matching header.")
-            if len(rows) >= MAX_ROWS:
-                raise ValueError(f"Dataset exceeds the {MAX_ROWS} row limit.")
-            if (len(rows) + 1) * len(names) > MAX_CELLS:
-                raise ValueError("Dataset exceeds the configured processing memory budget.")
+                raise ValueError("CSV rows must have the same number of fields as the header.")
+            if len(rows) >= max_rows:
+                raise ValueError(f"Table exceeds the {max_rows} row limit.")
+            if (len(rows) + 1) * len(names) > max_cells:
+                raise ValueError(f"Table exceeds the {max_cells} cell limit.")
             rows.append(row)
+            if check and len(rows) % 5000 == 0:
+                check()
         df = pd.DataFrame(rows, columns=names)
     elif suffix == ".json":
         def pairs(items):
@@ -491,7 +247,7 @@ def parse_source(raw, suffix):
     elif suffix in {".xlsx", ".xls"}:
         if suffix == ".xlsx":
             with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-                if sum(i.file_size for i in archive.infolist()) > MAX_BYTES * 10:
+                if sum(i.file_size for i in archive.infolist()) > settings.DATASET_MAX_SPREADSHEET_EXPANDED_BYTES:
                     raise ValueError("Spreadsheet expanded size exceeds the safety limit.")
                 if any("vbaProject" in i.filename or "externalLinks/" in i.filename for i in archive.infolist()):
                     raise ValueError("Macros and external spreadsheet links are unsupported.")
@@ -519,22 +275,23 @@ def parse_source(raw, suffix):
         raise ValueError("Unsupported file type. Use CSV, XLSX, XLS or flat-record JSON.")
     if df.empty:
         raise ValueError("Dataset contains no data rows.")
-    if len(df) > MAX_ROWS or len(df.columns) > MAX_COLUMNS or len(df) * len(df.columns) > MAX_CELLS:
+    if len(df) > max_rows or len(df.columns) > MAX_COLUMNS or len(df) * len(df.columns) > max_cells:
         raise ValueError("Dataset exceeds the configured row or column limit.")
     return df.replace(r"^\s*$", None, regex=True).replace({"NaN": None, "null": None})
 
 
-def profile_frame(df, date_order=None):
+def profile_frame(df, date_order=None, check=None):
     cols, warnings = [], []
     normalized = df.copy()
     for i, name in enumerate(df.columns):
+        if check: check()
         s = df[name]
         present = s.dropna()
         canonical = key(name)
         currency_code = next((code for code in ("BRL", "USD", "INR", "EUR", "GBP")
                               if canonical.endswith(code.lower()) and canonical[:-3] in ALIASES["revenue"] | ALIASES["currency"] | ALIASES["price"]), None)
         semantic_key = canonical[:-3] if currency_code else canonical
-        idlike = canonical.endswith("id") or canonical in {"phone", "phonenumber", "zipcode", "postalcode"}
+        idlike = canonical.endswith("id") or canonical.endswith("zipcodeprefix") or canonical in {"phone", "phonenumber", "zipcode", "postalcode"}
         role = next((r for r, aliases in ALIASES.items() if semantic_key in aliases), None)
         if canonical in {"currency", "currencycode"}:
             codes = set(present.astype(str).str.upper().str.strip())
@@ -614,6 +371,14 @@ def infer_semantics(cols):
         elif candidates:
             ambiguous.append({"role": role, "candidates": [c["name"] for c in candidates]})
     codes = {c.get("currency_code") for c in cols if c.get("currency_code")}
+    names = {c['name']: c for c in cols}
+    # Exact Olist headers override ambiguous generic timestamp/identifier suggestions.
+    suggestions = {"date": "order_purchase_timestamp", "customer": "customer_unique_id",
+                   "delivery_date": "order_delivered_customer_date", "estimated_date": "order_estimated_delivery_date"}
+    for role, name in suggestions.items():
+        if name in names and (role == 'customer' or names[name]['dtype'] == 'datetime'):
+            mappings[role] = name
+            ambiguous = [a for a in ambiguous if a['role'] != role]
     return {"fields": mappings, "ambiguities": ambiguous, "currency_code": next(iter(codes)) if len(codes) == 1 else None,
             "domain": "commerce" if "revenue" in mappings or "product" in mappings else "general"}
 
@@ -630,11 +395,10 @@ def detect_capabilities(semantics):
             for name, needed in requirements.items()}
 
 
-def ingest(db, user, name, raw, suffix, provenance: dict | None = None):
+def ingest(db, user, name, raw, suffix):
     ensure_registry(db)
-    raw_to_store = raw if len(raw) <= 10 * 1024 * 1024 else None
     ds = Dataset(id=str(uuid.uuid4()), name=name, owner=user["username"], status="PROCESSING",
-                 source_type=suffix.lstrip("."), raw_source=raw_to_store)
+                 source_type=suffix.lstrip("."), raw_source=raw)
     db.add(ds)
     db.commit()
     started = time.monotonic()
@@ -660,8 +424,7 @@ def ingest(db, user, name, raw, suffix, provenance: dict | None = None):
                 from sqlalchemy import Index
                 Index(f"ix_{table.name}_{col['storage']}", table.c[col["storage"]]).create(db.connection())
         ds.row_count, ds.column_count = len(source), len(columns)
-        ds.profile = {"columns": columns, "provenance": provenance or {}}
-        ds.quality = {**quality, "processing_seconds": round(time.monotonic() - started, 3)}
+        ds.profile, ds.quality = {"columns": columns}, {**quality, "processing_seconds": round(time.monotonic() - started, 3)}
         ds.semantics = infer_semantics(columns)
         ds.capabilities = detect_capabilities(ds.semantics)
         ds.status = "READY"

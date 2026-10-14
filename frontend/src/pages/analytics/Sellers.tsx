@@ -1,4 +1,6 @@
 import DatasetResults from '@/components/DatasetResults'
+import BusinessEvidence from '@/components/BusinessEvidence'
+import { useDataset } from '@/hooks/useDataset'
 import { useEffect, useState } from 'react'
 import {
   LineChart,
@@ -16,10 +18,11 @@ import { useFilters } from '@/hooks/useFilters'
 import { KpiCard } from '@/components/KpiCard'
 import { fmtMoney } from '@/services/format'
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316']
+const COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)', 'var(--chart-7)']
 
 export default function Sellers() {
   const { filters } = useFilters()
+  const { active } = useDataset()
   const [data, setData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -35,7 +38,7 @@ export default function Sellers() {
       })
       .catch(e => { if (current) { setError(e.message); setState('error') } })
     return () => { current = false }
-  }, [filters])
+  }, [filters, active?.dataset_id, active?.updated_at])
 
   if (state === 'error') {
     return (
@@ -70,10 +73,11 @@ export default function Sellers() {
   // Extract unique seller IDs from series
   const seriesSellers = Array.from(new Set(top_sellers_series?.map((s: any) => s.seller) || [])) as string[]
 
-  if ('metric_cards' in data) return <DatasetResults data={data} />
+  if ('metric_cards' in data) return <div className="space-y-6"><DatasetResults data={data} /><BusinessEvidence domain="sellers" /></div>
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <BusinessEvidence domain="sellers" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Active Sellers" value={kpis.active_sellers.toLocaleString()} />
         <KpiCard label="Avg Revenue / Seller" value={fmtMoney(kpis.avg_revenue_per_seller)} />
@@ -82,17 +86,17 @@ export default function Sellers() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top Sellers Revenue Over Time</h2>
           {seriesByPeriod && seriesByPeriod.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={seriesByPeriod}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                <XAxis dataKey="period" stroke="#666" fontSize={11} />
-                <YAxis stroke="#666" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" />
+                <XAxis dataKey="period" stroke="rgb(var(--muted))" fontSize={11} />
+                <YAxis stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
                 <Tooltip
                   formatter={(v: number) => fmtMoney(v)}
-                  contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                  contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                 />
                 {seriesSellers.map((seller, idx) => (
                   <Line
@@ -112,19 +116,19 @@ export default function Sellers() {
           )}
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800">
           <h2 className="mb-3 font-medium">Top States by Seller Revenue</h2>
           {by_state && by_state.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={by_state.slice(0, 10)} layout="vertical" margin={{ left: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#262626" horizontal={false} />
-                <XAxis type="number" stroke="#666" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
-                <YAxis type="category" dataKey="state" stroke="#666" fontSize={10} width={40} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgb(var(--border))" horizontal={false} />
+                <XAxis type="number" stroke="rgb(var(--muted))" fontSize={11} tickFormatter={(v) => `${Math.round(v / 1000)}k`} />
+                <YAxis type="category" dataKey="state" stroke="rgb(var(--muted))" fontSize={10} width={40} />
                 <Tooltip
                   formatter={(v: number) => fmtMoney(v)}
-                  contentStyle={{ background: '#171717', border: '1px solid #333' }}
+                  contentStyle={{ background: 'rgb(var(--surface-raised))', border: '1px solid rgb(var(--border))' }}
                 />
-                <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="revenue" fill="var(--chart-5)" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -134,7 +138,7 @@ export default function Sellers() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800 overflow-hidden flex flex-col">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800 overflow-hidden flex flex-col">
           <h2 className="mb-3 font-medium">Top Sellers</h2>
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 max-h-[400px] custom-scrollbar">
             {top_sellers?.map((s: any) => (
@@ -158,7 +162,7 @@ export default function Sellers() {
           </div>
         </div>
 
-        <div className="bg-neutral-900/60 p-4 rounded-lg border border-neutral-800 overflow-hidden flex flex-col">
+        <div className="abi-panel p-4 rounded-lg border border-neutral-800 overflow-hidden flex flex-col">
           <h2 className="mb-3 font-medium">Seller Demographics (States)</h2>
           <div className="space-y-3 flex-1 overflow-y-auto pr-2 max-h-[400px] custom-scrollbar">
             {by_state?.map((s: any) => (

@@ -91,10 +91,10 @@ describe('auth service', () => {
     expect(getToken()).toBe('renewed')
   })
 
-  it('does not overwrite authentication on refresh failure', async () => {
+  it('preserves authentication during a temporary refresh service failure', async () => {
     localStorage.setItem('sem5_refresh', 'refresh-a')
     localStorage.setItem('sem5_token', 'existing')
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 401 })))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 503 })))
     expect(await refreshAccessToken()).toBeNull()
     expect(getToken()).toBe('existing')
   })

@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/Workspace'
 import { NavLink, Outlet } from 'react-router-dom'
 
 const TABS = [
@@ -15,10 +16,10 @@ export default function AdminLayout() {
     <div className="space-y-6">
       <div>
         <div className="text-xs uppercase tracking-wide text-neutral-500">Administration</div>
-        <h1 className="text-2xl font-semibold">Platform Administration</h1>
+        <PageHeader title="Platform Administration" />
       </div>
 
-      <nav className="flex flex-wrap gap-1 border-b border-neutral-800">
+      <nav className="abi-tabs">
         {TABS.map((t) => (
           <NavLink
             key={t.to}
